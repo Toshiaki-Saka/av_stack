@@ -33,7 +33,7 @@
   ワインドアップ）、離散 LQR（DARE 後退反復）、LTV-MPC（FISTA QP ソルバー）。
 
 - **センサー・知覚** — LiDAR / Radar / Camera の物体レベルノイズモデル（それぞれ
-  異方性共分散 `R` を出力）、情報形式による最尤センサー融合、マハラノビス距離
+  異方性共分散 $R$ を出力）、情報形式による最尤センサー融合、マハラノビス距離
   ゲーティング。Radar Doppler で速度先行値を取得。
 
 - **追跡** — **IMM（Interacting Multiple Model）** 追跡器。低ノイズの cruise
@@ -53,16 +53,33 @@
 
 | 項目 | 結果 |
 |---|---|
-| 自転車モデル線形化残差 | O(ε²) = 2.3e-6（非線形ステップと整合） |
-| LQR 横偏差残差（8 s 後） | 8.6e-14 m（実質ゼロ） |
-| MPC 速度追従 | v = 12.00 m/s（目標 12）、max\|a\| = 3.00（制限 3.0） |
-| MPC 横方向回復 | y = 0.000 m（目標 0）、max\|δ\| = 0.600（制限 0.6） |
-| 追跡器定常誤差 | 位置 < 0.6 m、速度 < 0.4 m/s |
+| 自転車モデル線形化残差 | $O(\varepsilon^2) = 2.3\times10^{-6}$（非線形ステップと整合） |
+| LQR 横偏差残差（8 s 後） | $8.6\times10^{-14}$ m（実質ゼロ） |
+| MPC 速度追従 | $v = 12.00$ m/s（目標 12）、$\max\lvert a\rvert = 3.00$（制限 3.0） |
+| MPC 横方向回復 | $y = 0.000$ m（目標 0）、$\max\lvert\delta\rvert = 0.600$（制限 0.6） |
+| 追跡器定常誤差 | 位置 $< 0.6$ m、速度 $< 0.4$ m/s |
 | ガードレール（急ブレーキシナリオ） | 追突 0 回（ガードレールなしでは衝突） |
 | ガードレール（割り込みシナリオ） | 横方向 RSS が横重複の約 1.5 s 前に発火 |
 | Python テストスイート | 28 合格（`pytest tests/`、5 ファイル・C++ モジュールを使用） |
 
 ## クイックスタート
+
+**Windows (MSVC) — ワンコマンド。** リポジトリ直下の `build_and_run.ps1` が、Python 依存
+パッケージのインストール → C++ コアの CMake configure・ビルド → C++/Python テスト実行 →
+デモ起動までを一括で実行します。
+
+```powershell
+.\build_and_run.ps1                          # ビルド + テスト + フルパイプラインdemo（既定）
+.\build_and_run.ps1 -SkipBuild               # ビルドを省略してdemoのみ実行
+.\build_and_run.ps1 -SkipBuild -SkipTests    # ビルドとテストを省略
+.\build_and_run.ps1 -Demo acc                # demoを選択（下記参照）
+```
+
+`-Demo` でシナリオを選択します: `pipeline`（guardrail ON/OFF 比較・既定）、
+`animation`（純Pythonリアルタイムアニメーション）、`acc`（ACC追従）、
+`avoidance`（車線変更回避）、`safety_stop`（RSS guardrail 緊急停車）。
+
+**プラットフォーム非依存 — ビルド不要:**
 
 ```bash
 pip install -r requirements.txt

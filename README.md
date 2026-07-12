@@ -40,6 +40,23 @@ scenarios.
 
 ### Quick start
 
+**Windows (MSVC) — one command.** `build_and_run.ps1` in the repo root installs the
+Python dependencies, configures and builds the C++ core, runs the C++ and Python test
+suites, then launches a demo — end to end:
+
+```powershell
+.\build_and_run.ps1                          # build + test + full pipeline demo (default)
+.\build_and_run.ps1 -SkipBuild               # skip the build, just run the demo
+.\build_and_run.ps1 -SkipBuild -SkipTests    # skip build and tests
+.\build_and_run.ps1 -Demo acc                # pick a demo (see below)
+```
+
+`-Demo` selects the scenario: `pipeline` (guardrail ON/OFF comparison, default),
+`animation` (pure-Python real-time animation), `acc` (ACC car-following),
+`avoidance` (lane-change avoidance), or `safety_stop` (RSS guardrail emergency stop).
+
+**Any platform — no build required:**
+
 ```bash
 pip install -r requirements.txt
 python python/animation_demo.py          # real-time animation, no C++ required
@@ -114,15 +131,15 @@ through pybind11; `python/` is the user-facing visualisation and scenario layer.
 
 The kinematic bicycle is the prediction and simulation model throughout the stack:
 
-```
-state  s = [x, y, ψ, v]          input u = [a, δ]
-ẋ = v cos ψ,  ẏ = v sin ψ,  ψ̇ = (v/L) tan δ,  v̇ = a
-```
+$$\begin{aligned}
+&s = [x, y, \psi, v] \qquad u = [a, \delta] \\
+&\dot{x} = v\cos\psi, \quad \dot{y} = v\sin\psi, \quad \dot{\psi} = (v/L)\tan\delta, \quad \dot{v} = a
+\end{aligned}$$
 
 Integrated with **RK4** (not Euler) — critical for the MPC's prediction accuracy
-at `dt = 0.1 s`. Jacobians `A = ∂f/∂s`, `B = ∂f/∂u` of the RK4 step are computed
+at $dt = 0.1$ s. Jacobians $A = \partial f/\partial s$, $B = \partial f/\partial u$ of the RK4 step are computed
 by central finite differences, keeping them provably consistent with the nonlinear
-step the plant actually uses. Verified: linearisation residual `O(ε²) = 2.3e-6`.
+step the plant actually uses. Verified: linearisation residual $O(\varepsilon^2) = 2.3\times10^{-6}$.
 
 ---
 
@@ -138,47 +155,41 @@ and fast; the reference for trade-off comparison.
 
 ### LQR
 
-Discrete LQR on the linearised 2-state lateral error model `[eᵧ, e_ψ]`:
+Discrete LQR on the linearised 2-state lateral error model $[e_y, e_\psi]$:
 
-```
-eᵧ' = v e_ψ,   e_ψ' = (v/L) δ − v κ
-```
+$$\dot{e}_y = v\,e_\psi, \quad \dot{e}_\psi = (v/L)\,\delta - v\kappa$$
 
-Gain computed by **backward DARE iteration** until convergence (`‖ΔP‖ < 1e-10`),
-with feedforward `δ_ff = atan(L κ)`. Verified: cross-track residual after 8 s = 8.6e-14 m.
+Gain computed by **backward DARE iteration** until convergence ($\lVert \Delta P \rVert < 1\times10^{-10}$),
+with feedforward $\delta_{ff} = \arctan(L\kappa)$. Verified: cross-track residual after 8 s = $8.6\times10^{-14}$ m.
 
 ### MPC
 
 Linear time-varying MPC over a 15-step horizon. At each stage the RK4 step is
-linearised around the reference to get `(Aₖ, Bₖ, dₖ)`, then condensed into a
+linearised around the reference to get $(A_k, B_k, d_k)$, then condensed into a
 strongly-convex box-constrained QP:
 
-```
-min  E'Q̄E + ΔU'R̄ΔU    s.t.  uₘᵢₙ ≤ uᵣₑf + ΔU ≤ uₘₐₓ
-```
+$$\min\ E^\top \bar{Q} E + \Delta U^\top \bar{R} \Delta U \quad \text{s.t.}\quad u_{min} \le u_{ref} + \Delta U \le u_{max}$$
 
 Solved from scratch with **FISTA** (200 iters, step = 1/L_f via power iteration).
-Handles actuator limits `a ∈ [-6, 3] m/s²`, `δ ∈ [-0.6, 0.6] rad` explicitly.
+Handles actuator limits $a \in [-6, 3]$ m/s², $\delta \in [-0.6, 0.6]$ rad explicitly.
 Verified: target speed reached exactly, limit respected within 1 %.
 
 ---
 
 ## Sensors and perception (`cpp/include/sensors/sensors.hpp`, `cpp/include/perception/fusion.hpp`)
 
-Three sensor models, each returning detections with a measurement covariance `R`:
+Three sensor models, each returning detections with a measurement covariance $R$:
 
 | Sensor | Noise model | Special output |
 |---|---|---|
-| **LiDAR** | isotropic `σ = 0.15 m` | position only |
-| **Radar** | anisotropic: `σ_r = 0.4 m`, `σ_lat = 1.2 m` (rotated) | Doppler radial velocity |
-| **Camera** | `σ_bearing = 0.6°`, range relative error 10 % (rotated) | object class label |
+| **LiDAR** | isotropic $\sigma = 0.15$ m | position only |
+| **Radar** | anisotropic: $\sigma_r = 0.4$ m, $\sigma_{lat} = 1.2$ m (rotated) | Doppler radial velocity |
+| **Camera** | $\sigma_{bearing} = 0.6$°, range relative error 10 % (rotated) | object class label |
 
 Fusion (**`perception/fusion.hpp`**) groups cross-sensor detections by Mahalanobis distance
-gating (`χ² < 9.21`, 2 DOF, 99 % gate) and combines each cluster in information form:
+gating ($\chi^2 < 9.21$, 2 DOF, 99 % gate) and combines each cluster in information form:
 
-```
-R_fused = (Σᵢ Rᵢ⁻¹)⁻¹,    z_fused = R_fused Σᵢ Rᵢ⁻¹ zᵢ
-```
+$$R_{fused} = \left(\sum_i R_i^{-1}\right)^{-1}, \quad z_{fused} = R_{fused} \sum_i R_i^{-1} z_i$$
 
 This is the maximum-likelihood combination of independent Gaussian measurements.
 Radar Doppler primes the velocity estimate for new tracks.
@@ -190,10 +201,10 @@ Radar Doppler primes the velocity estimate for new tracks.
 An **IMM (Interacting Multiple Model)** tracker per object (`struct IMM`), mixing
 two constant-velocity Kalman filters with different process noise — a low-noise
 *cruise* model and a high-noise *manoeuvre* model — so it stays tight while cruising
-yet reacts quickly when an agent brakes or cuts in. State `[x, y, vx, vy]`; the
+yet reacts quickly when an agent brakes or cuts in. State $[x, y, v_x, v_y]$; the
 mode probabilities are updated from each model's measurement likelihood and the
 combined estimate is the probability-weighted mixture. Fused position detections
-(with covariance `R`) drive the update; nearest-neighbour data association with a
+(with covariance $R$) drive the update; nearest-neighbour data association with a
 Mahalanobis gate; tracks are *confirmed* after `min_hits` consistent updates.
 Verified: mean position error < 0.6 m, velocity error < 0.4 m/s after a 3 s
 cold-start.
@@ -207,14 +218,14 @@ For each candidate lane (keep / change left / change right) the planner:
 1. **IDM rollout** — rolls out the ego longitudinally against the predicted
    in-lane lead using the **Intelligent Driver Model**:
 
-   ```
-   s* = s₀ + vT + v·Δv / (2√(a·b))
-   a_IDM = a [1 − (v/v_des)⁴ − (s*/gap)²]   clipped to [−1.5b, a]
-   ```
+   $$\begin{aligned}
+   s^* &= s_0 + vT + \frac{v\cdot\Delta v}{2\sqrt{a\cdot b}} \\
+   a_{IDM} &= a\left[1 - (v/v_{des})^4 - (s^*/gap)^2\right] \quad \text{clipped to } [-1.5b, a]
+   \end{aligned}$$
 
-2. **Smoothstep lateral** — blends the current lane to the target over `t_change = 3 s`.
+2. **Smoothstep lateral** — blends the current lane to the target over $t_{change} = 3$ s.
 
-3. **Cost** — scores on speed-keeping, progress, lateral comfort (max `v² κ`), lane preference, and minimum clearance to predicted agents. Trajectories that enter the safe radius of any agent are **rejected**.
+3. **Cost** — scores on speed-keeping, progress, lateral comfort (max $v^2 \kappa$), lane preference, and minimum clearance to predicted agents. Trajectories that enter the safe radius of any agent are **rejected**.
 
 Falls back to `EMERGENCY_SLOW` (decelerate at 1.5b) if all candidates are unsafe, deferring to the guardrail. Verified: IDM headway maintained; lane-change accepted only when the neighbouring slot is clear.
 
@@ -228,15 +239,13 @@ every timestep:
 ### 1. RSS longitudinal (Shalev-Shwartz et al., 2017)
 
 Minimum safe following distance: the gap such that, even if the lead brakes at
-`b_max` while ego accelerates for `ρ` seconds (reaction time) then brakes at `b_min`:
+$b_{max}$ while ego accelerates for $\rho$ seconds (reaction time) then brakes at $b_{min}$:
 
-```
-d_RSS = v_ego ρ + ½ a ρ² + (v_ego + ρa)²/(2b) − v_lead²/(2b_lead)
-```
+$$d_{RSS} = v_{ego}\,\rho + \tfrac{1}{2} a \rho^2 + \frac{(v_{ego} + \rho a)^2}{2b} - \frac{v_{lead}^2}{2b_{lead}}$$
 
 ### 2. Time-to-collision
 
-`TTC = gap / (v_ego − v_lead)` below a threshold (2.5 s).
+$TTC = gap / (v_{ego} - v_{lead})$ below a threshold (2.5 s).
 
 ### 3. Lateral RSS
 
@@ -245,10 +254,10 @@ RSS safe distance *and* whose longitudinal position is within the RSS band.
 Per RSS, both conditions must hold simultaneously.
 
 When any check fires, the guardrail **latches** for `hold` steps and substitutes
-emergency braking (`−6 m/s²`) for the planner's command.
+emergency braking ($-6$ m/s²) for the planner's command.
 
 An honest finding about guardrail limits: the RSS check uses worst-case parameters
-(`b_max = 8 m/s²` for the lead); a calibration error in those parameters
+($b_{max} = 8$ m/s² for the lead); a calibration error in those parameters
 translates directly into a gap error. The safety case makes this explicit.
 
 ---
@@ -256,7 +265,7 @@ translates directly into a gap error. The safety case makes this explicit.
 ## Occupancy grid (`cpp/include/world/occupancy.hpp`)
 
 Splatts each predicted agent trajectory as a vehicle-footprint Gaussian over the
-road grid ahead, with uncertainty inflation `σ(k) = σ₀ + growth·k` per step.
+road grid ahead, with uncertainty inflation $\sigma(k) = \sigma_0 + growth\cdot k$ per step.
 Combined across agents by probabilistic OR. Provides a **soft cost** for the planner
 and a **hard veto** threshold for the guardrail — a continuous alternative to
 discrete collision checks. Verified: a 10 m² occupied cell scores
@@ -288,7 +297,7 @@ implementable and verifiable*, not a complex module that itself needs a monitor.
 
 ## Build
 
-Requires a C++17 compiler, CMake ≥ 3.18, and Python ≥ 3.9 with pybind11.
+Requires a C++17 compiler, CMake $\ge 3.18$, and Python $\ge 3.9$ with pybind11.
 
 ```bash
 pip install pybind11 numpy matplotlib pytest
@@ -356,10 +365,10 @@ pytest tests/ -v
 
 | check | result |
 |---|---|
-| Bicycle RK4 linearisation residual | O(ε²) = 2.3e-6 (consistent with nonlinear step) |
-| LQR cross-track residual after 8 s | 8.6e-14 m (effectively zero) |
-| MPC speed tracking | v = 12.00 m/s (target 12), max\|a\| = 3.00 (limit 3.0) |
-| MPC lateral recovery | y = 0.000 m (target 0), max\|δ\| = 0.600 (limit 0.6) |
+| Bicycle RK4 linearisation residual | $O(\varepsilon^2) = 2.3\times10^{-6}$ (consistent with nonlinear step) |
+| LQR cross-track residual after 8 s | $8.6\times10^{-14}$ m (effectively zero) |
+| MPC speed tracking | $v = 12.00$ m/s (target 12), $\max\lvert a\rvert = 3.00$ (limit 3.0) |
+| MPC lateral recovery | $y = 0.000$ m (target 0), $\max\lvert\delta\rvert = 0.600$ (limit 0.6) |
 | Tracker position error (steady state) | < 0.6 m (mean), < 0.4 m/s (velocity) |
 | Guardrail — hard brake scenario | 0 rear-ends (vs. collision without guardrail) |
 | Guardrail — cut-in scenario | lateral RSS fires ~1.5 s before overlap |

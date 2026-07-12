@@ -83,37 +83,36 @@ doer–checker pattern mandated in IEC 61508 / ISO 26262 for SIL 2+ monitors.
 ### 2.1 Continuous-time model
 
 The kinematic bicycle collapses the four-wheeled vehicle to a single rear axle and
-one steering angle at the front axle. State `s = [x, y, ψ, v]ᵀ ∈ ℝ⁴`, input
-`u = [a, δ]ᵀ ∈ ℝ²`:
+one steering angle at the front axle. State $s = [x, y, \psi, v]^\top \in \mathbb{R}^4$, input
+$u = [a, \delta]^\top \in \mathbb{R}^2$:
 
-```
-ẋ   = v cos ψ
-ẏ   = v sin ψ
-ψ̇   = (v / L) tan δ
-v̇   = a
-```
+$$\begin{aligned}
+\dot{x} &= v \cos \psi \\
+\dot{y} &= v \sin \psi \\
+\dot{\psi} &= (v / L) \tan \delta \\
+\dot{v} &= a
+\end{aligned}$$
 
-where `L = 2.7 m` is the wheelbase. The model is valid at low-to-moderate slip
+where $L = 2.7$ m is the wheelbase. The model is valid at low-to-moderate slip
 angles; for highway speeds below tyre-limit conditions the kinematic assumption
 holds to within a few percent of a dynamic (force-based) model.
 
 ### 2.2 Numerical integration — Runge–Kutta 4
 
-The discrete step `s_{k+1} = Φ(s_k, u_k, dt)` is computed with the classical
+The discrete step $s_{k+1} = \Phi(s_k, u_k, dt)$ is computed with the classical
 fourth-order Runge–Kutta method:
 
-```
-k₁ = f(sₖ, uₖ)
-k₂ = f(sₖ + (dt/2) k₁,  uₖ)
-k₃ = f(sₖ + (dt/2) k₂,  uₖ)
-k₄ = f(sₖ + dt k₃,       uₖ)
+$$\begin{aligned}
+k_1 &= f(s_k, u_k) \\
+k_2 &= f(s_k + (dt/2) k_1,\ u_k) \\
+k_3 &= f(s_k + (dt/2) k_2,\ u_k) \\
+k_4 &= f(s_k + dt\, k_3,\ u_k) \\
+s_{k+1} &= s_k + \tfrac{dt}{6}(k_1 + 2k_2 + 2k_3 + k_4)
+\end{aligned}$$
 
-s_{k+1} = sₖ + (dt/6)(k₁ + 2k₂ + 2k₃ + k₄)
-```
-
-**Why RK4 and not Euler?** The local truncation error of Euler is O(dt²); for
-`dt = 0.1 s` and `v = 13 m/s` the yaw-rate term `v/L · tan δ` accumulates roughly
-0.5 m/s yaw-rate error per second. RK4 is O(dt⁵) locally and reduces this to the
+**Why RK4 and not Euler?** The local truncation error of Euler is $O(dt^2)$; for
+$dt = 0.1$ s and $v = 13$ m/s the yaw-rate term $v/L \cdot \tan \delta$ accumulates roughly
+0.5 m/s yaw-rate error per second. RK4 is $O(dt^5)$ locally and reduces this to the
 sub-millimetre range, which matters because the MPC prediction horizon spans 15
 steps (1.5 s) and an inaccurate prediction model systematically biases the optimal
 input.
@@ -122,33 +121,31 @@ input.
 
 For the MPC and LQR linearisation, we need the discrete-time Jacobians:
 
-```
-Aₖ = ∂Φ/∂s |_(sₖ,uₖ)   ∈ ℝ^{4×4}
-Bₖ = ∂Φ/∂u |_(sₖ,uₖ)   ∈ ℝ^{4×2}
-```
+$$\begin{aligned}
+A_k &= \partial \Phi / \partial s \,\big|_{(s_k, u_k)} \in \mathbb{R}^{4\times 4} \\
+B_k &= \partial \Phi / \partial u \,\big|_{(s_k, u_k)} \in \mathbb{R}^{4\times 2}
+\end{aligned}$$
 
 These are computed numerically by central finite differences:
 
-```
-Aₖ(i,j) = [ Φ(sₖ + ε eⱼ, uₖ) − Φ(sₖ − ε eⱼ, uₖ) ]ᵢ / (2ε)
-Bₖ(i,j) = [ Φ(sₖ, uₖ + ε eⱼ) − Φ(sₖ, uₖ − ε eⱼ) ]ᵢ / (2ε)
-```
+$$\begin{aligned}
+A_k(i,j) &= \big[ \Phi(s_k + \varepsilon e_j, u_k) - \Phi(s_k - \varepsilon e_j, u_k) \big]_i / (2\varepsilon) \\
+B_k(i,j) &= \big[ \Phi(s_k, u_k + \varepsilon e_j) - \Phi(s_k, u_k - \varepsilon e_j) \big]_i / (2\varepsilon)
+\end{aligned}$$
 
-with `ε = 10⁻⁶`. The key advantage over analytical Jacobians is **consistency**: the
+with $\varepsilon = 10^{-6}$. The key advantage over analytical Jacobians is **consistency**: the
 finite-difference Jacobian is guaranteed to be consistent with the same RK4 step
-that the plant uses, so the LTV error model `e_{k+1} ≈ Aₖ eₖ + Bₖ Δuₖ + dₖ` has
+that the plant uses, so the LTV error model $e_{k+1} \approx A_k e_k + B_k \Delta u_k + d_k$ has
 no modelling mismatch. Analytical Jacobians require deriving the chain rule through
 the RK4 stages, which introduces sign errors and is invalidated whenever the
 integration method changes.
 
-**Verification.** For a typical operating point `(s₀, u₀)` the linearisation
+**Verification.** For a typical operating point $(s_0, u_0)$ the linearisation
 residual satisfies:
 
-```
-‖Φ(s₀ + δs, u₀) − (Φ(s₀, u₀) + Aₖ δs)‖ / ‖δs‖  ≈  2.3 × 10⁻⁶   (second-order)
-```
+$$\lVert \Phi(s_0 + \delta s, u_0) - (\Phi(s_0, u_0) + A_k \delta s) \rVert / \lVert \delta s \rVert \approx 2.3 \times 10^{-6} \quad \text{(second-order)}$$
 
-confirming that the Jacobians are correct to the expected O(ε²) accuracy of central
+confirming that the Jacobians are correct to the expected $O(\varepsilon^2)$ accuracy of central
 differences.
 
 ---
@@ -157,23 +154,23 @@ differences.
 
 All numerical work uses a minimal header-only dense matrix library (`linalg.hpp`)
 with no external dependencies (no Eigen, BLAS, or LAPACK). The design trade-off:
-portability and zero setup cost in exchange for O(n³) dense algorithms, acceptable
-because all matrices are at most ~30 × 30 (N·m = 30 for the condensed MPC QP with
-N = 15, m = 2).
+portability and zero setup cost in exchange for $O(n^3)$ dense algorithms, acceptable
+because all matrices are at most ~$30 \times 30$ ($N \cdot m = 30$ for the condensed MPC QP with
+$N = 15$, $m = 2$).
 
-**`solve(A, b)` — Gauss–Jordan with partial pivoting.** For each column `c`:
+**`solve(A, b)` — Gauss–Jordan with partial pivoting.** For each column $c$:
 
-1. Find the pivot row `p = argmax_{i≥c} |A(i,c)|`.
-2. Swap rows `c` and `p` in `A` and `b`.
-3. Divide row `c` by the diagonal entry.
-4. Eliminate column `c` from all other rows.
+1. Find the pivot row $p = \operatorname*{argmax}_{i \ge c} |A(i,c)|$.
+2. Swap rows $c$ and $p$ in $A$ and $b$.
+3. Divide row $c$ by the diagonal entry.
+4. Eliminate column $c$ from all other rows.
 
-A small regularisation `A(c,c) += 10⁻⁹` is added if the pivot is below `10⁻¹²`
+A small regularisation $A(c,c) \mathrel{+}= 10^{-9}$ is added if the pivot is below $10^{-12}$
 to handle near-singular cases gracefully (this occurs for the DARE at very early
-iterations when `P` is still close to `Q`).
+iterations when $P$ is still close to $Q$).
 
 **`inv(A)` = `solve(A, I)`.** Used only for tracker innovation covariance inversion
-(2×2 matrices), so the cost is negligible.
+($2\times2$ matrices), so the cost is negligible.
 
 ---
 
@@ -183,9 +180,7 @@ iterations when `P` is still close to `Q`).
 
 Standard three-term controller with integral clamping:
 
-```
-u(t) = Kₚ e(t) + Kᵢ ∫₀ᵗ e(τ)dτ + Kd ė(t)
-```
+$$u(t) = K_p\, e(t) + K_i \int_0^t e(\tau)\,d\tau + K_d\, \dot{e}(t)$$
 
 Discretised with Euler integration for the integral and a backward difference for
 the derivative. Two saturation levels are applied independently:
@@ -200,54 +195,52 @@ rather than corrected.
 
 ### 4.2 Discrete LQR via DARE
 
-**Problem.** Given the discrete time-invariant linear system `e_{k+1} = A eₖ + B uₖ`,
-find the state-feedback gain `K` that minimises the infinite-horizon quadratic cost:
+**Problem.** Given the discrete time-invariant linear system $e_{k+1} = A e_k + B u_k$,
+find the state-feedback gain $K$ that minimises the infinite-horizon quadratic cost:
 
-```
-J = Σ_{k=0}^{∞} (eₖᵀ Q eₖ + uₖᵀ R uₖ),    u_k = −K eₖ
-```
+$$J = \sum_{k=0}^{\infty} (e_k^\top Q e_k + u_k^\top R u_k), \quad u_k = -K e_k$$
 
 **DARE solution.** The optimal gain satisfies:
 
-```
-P  =  Q + AᵀPA − AᵀPB (R + BᵀPB)⁻¹ BᵀPA        (Discrete Algebraic Riccati Equation)
-K  =  (R + BᵀPB)⁻¹ BᵀPA
-```
+$$\begin{aligned}
+P &= Q + A^\top P A - A^\top P B (R + B^\top P B)^{-1} B^\top P A \quad \text{(Discrete Algebraic Riccati Equation)} \\
+K &= (R + B^\top P B)^{-1} B^\top P A
+\end{aligned}$$
 
 The implementation solves the DARE by **value iteration** (backward recursion in a
 finite-horizon approximation that converges to the infinite-horizon solution):
 
-```
-P₀ = Q
-Pₙ₊₁ = Q + AᵀPₙA − AᵀPₙB (R + BᵀPₙB)⁻¹ BᵀPₙA
-```
+$$\begin{aligned}
+P_0 &= Q \\
+P_{n+1} &= Q + A^\top P_n A - A^\top P_n B (R + B^\top P_n B)^{-1} B^\top P_n A
+\end{aligned}$$
 
-This converges to the stabilising solution `P*` quadratically near the fixed point.
-Convergence criterion: `‖Pₙ₊₁ − Pₙ‖₁ < 10⁻¹⁰` (typically in < 30 iterations for
+This converges to the stabilising solution $P^*$ quadratically near the fixed point.
+Convergence criterion: $\lVert P_{n+1} - P_n \rVert_1 < 10^{-10}$ (typically in < 30 iterations for
 the 2-state model). `iters = 1000` is a conservative upper bound.
 
 **Lateral path-tracking model.** The LQR is applied to the 2-state lateral error
-model `e = [eᵧ, e_ψ]ᵀ`:
+model $e = [e_y, e_\psi]^\top$:
 
-```
-eᵧ'  = v · e_ψ
-e_ψ' = (v/L) δ  −  v κ_ref
-```
+$$\begin{aligned}
+e_y' &= v \cdot e_\psi \\
+e_\psi' &= (v/L)\, \delta - v \kappa_{ref}
+\end{aligned}$$
 
-Discretised with Euler over `dt`:
+Discretised with Euler over $dt$:
 
-```
-A = [[1,  v·dt ],    B = [[    0    ],    Q = diag(qₑᵧ, qₑᵨ),    R = [r_δ]
-     [0,    1  ]]         [(v/L)·dt ]]
-```
+$$A = \begin{bmatrix} 1 & v \cdot dt \\ 0 & 1 \end{bmatrix}, \quad
+B = \begin{bmatrix} 0 \\ (v/L) \cdot dt \end{bmatrix}, \quad
+Q = \operatorname{diag}(q_{e_y}, q_{e_\psi}), \quad
+R = [r_\delta]$$
 
-The feedforward `δ_ff = arctan(L κ_ref)` cancels the curvature term, so the LQR
-only needs to regulate the residual errors. The gain `K` is recomputed at each step
-with the current speed `v` (clamped to 0.5 m/s to avoid singularity at standstill),
+The feedforward $\delta_{ff} = \arctan(L \kappa_{ref})$ cancels the curvature term, so the LQR
+only needs to regulate the residual errors. The gain $K$ is recomputed at each step
+with the current speed $v$ (clamped to 0.5 m/s to avoid singularity at standstill),
 making this an **online gain-scheduled LQR** rather than a fixed gain.
 
 **Steady-state performance.** For the double-lane-change trajectory at 12 m/s, the
-lateral LQR achieves a steady-state cross-track error of **8.6 × 10⁻¹⁴ m** (machine
+lateral LQR achieves a steady-state cross-track error of **$8.6 \times 10^{-14}$ m** (machine
 precision), confirming that the curvature feedforward and the LQR feedback together
 track the reference exactly for this constant-speed trajectory.
 
@@ -255,110 +248,100 @@ track the reference exactly for this constant-speed trajectory.
 
 #### 4.3.1 Problem formulation
 
-Track a reference trajectory `{(s_ref_k, u_ref_k)}_{k=0}^{N}` over a receding
-horizon `N = 15` steps (`dt = 0.1 s`, 1.5 s look-ahead) subject to box constraints:
+Track a reference trajectory $\{(s_{ref,k}, u_{ref,k})\}_{k=0}^{N}$ over a receding
+horizon $N = 15$ steps ($dt = 0.1$ s, 1.5 s look-ahead) subject to box constraints:
 
-```
-min  Σ_{k=1}^{N}  eₖᵀ Q̄ eₖ  +  Σ_{k=0}^{N-1}  Δuₖᵀ R̄ Δuₖ
+$$\begin{aligned}
+\min \quad & \sum_{k=1}^{N} e_k^\top \bar{Q} e_k + \sum_{k=0}^{N-1} \Delta u_k^\top \bar{R} \Delta u_k \\
+\text{s.t.} \quad & e_{k+1} = A_k e_k + B_k \Delta u_k + d_k, \quad e_k = s_k - s_{ref,k} \\
+& a_{min} \le u_{ref,k}(0) + \Delta u_k(0) \le a_{max} \\
+& \delta_{min} \le u_{ref,k}(1) + \Delta u_k(1) \le \delta_{max}
+\end{aligned}$$
 
-s.t.  e_{k+1} = Aₖ eₖ + Bₖ Δuₖ + dₖ,    eₖ = sₖ − s_ref_k
-      a_min ≤ u_ref_k(0) + Δuₖ(0) ≤ a_max
-      δ_min ≤ u_ref_k(1) + Δuₖ(1) ≤ δ_max
-```
-
-where `Q̄ = diag(q_x, q_y, q_ψ, q_v)` and `R̄ = diag(r_a, r_δ)` are repeated
-block-diagonal along the horizon, and `dₖ = Φ(s_ref_k, u_ref_k) − s_ref_{k+1}` is
+where $\bar{Q} = \operatorname{diag}(q_x, q_y, q_\psi, q_v)$ and $\bar{R} = \operatorname{diag}(r_a, r_\delta)$ are repeated
+block-diagonal along the horizon, and $d_k = \Phi(s_{ref,k}, u_{ref,k}) - s_{ref,k+1}$ is
 the affine defect from the nonlinear reference trajectory.
 
 #### 4.3.2 Per-stage linearisation
 
-At stage `k`, linearise the RK4 step around `(s_ref_k, u_ref_k)` via central
-finite differences (Section 2.3) to obtain `(Aₖ, Bₖ)`. This gives the **linear
+At stage $k$, linearise the RK4 step around $(s_{ref,k}, u_{ref,k})$ via central
+finite differences (Section 2.3) to obtain $(A_k, B_k)$. This gives the **linear
 time-varying (LTV)** error dynamics:
 
-```
-e_{k+1} = Aₖ eₖ + Bₖ Δuₖ + dₖ
-```
+$$e_{k+1} = A_k e_k + B_k \Delta u_k + d_k$$
 
-The defect `dₖ` absorbs the Taylor remainder and ensures that `eₖ = 0` is
-consistent with `sₖ = s_ref_k` for all `k` — a necessary property for the
+The defect $d_k$ absorbs the Taylor remainder and ensures that $e_k = 0$ is
+consistent with $s_k = s_{ref,k}$ for all $k$ — a necessary property for the
 constraint to be correct.
 
 #### 4.3.3 Condensing
 
-Define the stacked state vector `E = [e₁ᵀ, …, eₙᵀ]ᵀ ∈ ℝ^{Nn}` and input
-perturbation `ΔU = [Δu₀ᵀ, …, Δu_{N-1}ᵀ]ᵀ ∈ ℝ^{Nm}`. By forward recursion:
+Define the stacked state vector $E = [e_1^\top, \dots, e_N^\top]^\top \in \mathbb{R}^{Nn}$ and input
+perturbation $\Delta U = [\Delta u_0^\top, \dots, \Delta u_{N-1}^\top]^\top \in \mathbb{R}^{Nm}$. By forward recursion:
 
-```
-E = Sx e₀ + Su ΔU + offset
-```
+$$E = S_x e_0 + S_u \Delta U + \text{offset}$$
 
-The **condensed sensitivity matrix** `Su ∈ ℝ^{Nn × Nm}` has block-lower-triangular
+The **condensed sensitivity matrix** $S_u \in \mathbb{R}^{Nn \times Nm}$ has block-lower-triangular
 structure:
 
-```
-Su[(k)n+i, (j)m+c]  =  [ Aₖ₋₁ ··· Aⱼ₊₁ Bⱼ ](i,c)   for j ≤ k−1
-```
+$$S_u[(k)n+i,\, (j)m+c] = \big[ A_{k-1} \cdots A_{j+1} B_j \big](i,c) \quad \text{for } j \le k-1$$
 
-and the offset `offset[k·n : (k+1)·n]` propagates both `e₀` and all defects
-`d₀, …, d_{k-1}` through the product of `A` matrices.
+and the offset $\text{offset}[k \cdot n : (k+1) \cdot n]$ propagates both $e_0$ and all defects
+$d_0, \dots, d_{k-1}$ through the product of $A$ matrices.
 
 **Condensed QP** (eliminating E):
 
-```
-min_{ΔU}  ½ ΔUᵀ H ΔU + gᵀ ΔU
-s.t.       lo ≤ ΔU ≤ hi
+$$\begin{aligned}
+& \min_{\Delta U} \ \tfrac{1}{2} \Delta U^\top H \Delta U + g^\top \Delta U \\
+& \text{s.t.} \quad lo \le \Delta U \le hi \\[4pt]
+& H = 2(S_u^\top \bar{Q}_{blk} S_u + \bar{R}_{blk}) \quad \text{(positive definite)} \\
+& g = 2 S_u^\top \bar{Q}_{blk}\, \text{offset} \\
+& lo[k \cdot m + j] = u_{min}[j] - u_{ref,k}[j] \\
+& hi[k \cdot m + j] = u_{max}[j] - u_{ref,k}[j]
+\end{aligned}$$
 
-H = 2(Suᵀ Q̄_blk Su + R̄_blk)           (positive definite)
-g = 2 Suᵀ Q̄_blk offset
-lo[k·m+j] = u_min[j] − u_ref_k[j]
-hi[k·m+j] = u_max[j] − u_ref_k[j]
-```
-
-`H` is always positive definite because `R̄_blk` has strictly positive diagonal.
+$H$ is always positive definite because $\bar{R}_{blk}$ has strictly positive diagonal.
 
 #### 4.3.4 Solver: FISTA with box projection
 
 **Why FISTA?** The condensed QP has a box constraint set, for which the projection
-`Π_{[lo,hi]}` is the componentwise clamp — a closed-form O(Nm) operation. For
+$\Pi_{[lo,hi]}$ is the componentwise clamp — a closed-form $O(Nm)$ operation. For
 strongly convex objectives with closed-form projection, the Fast Iterative
-Shrinkage-Thresholding Algorithm (Beck & Teboulle, 2009) achieves O(1/k²) convergence
-in the objective gap, compared to O(1/k) for vanilla projected gradient. Interior-point
+Shrinkage-Thresholding Algorithm (Beck & Teboulle, 2009) achieves $O(1/k^2)$ convergence
+in the objective gap, compared to $O(1/k)$ for vanilla projected gradient. Interior-point
 methods would achieve faster asymptotic convergence but require an LP/QP solver
-dependency and are overkill for the problem sizes here (Nm = 30).
+dependency and are overkill for the problem sizes here ($Nm = 30$).
 
 **Algorithm** (FISTA with momentum restart not implemented — plain FISTA suffices):
 
-```
-Initialise:  x₀ = y₀ = 0 ∈ ℝ^{Nm},   t₀ = 1
-For i = 0, 1, …, I−1:
-    grad = 2 H yᵢ + g                              (gradient at yᵢ)
-    x_{i+1} = Π_{[lo,hi]}( yᵢ − α · grad )        (proximal step + projection)
-    t_{i+1} = (1 + √(1 + 4tᵢ²)) / 2
-    y_{i+1} = x_{i+1} + ((tᵢ−1)/t_{i+1})(x_{i+1} − xᵢ)   (Nesterov momentum)
-```
+$$\begin{aligned}
+& \text{Initialise:} \ x_0 = y_0 = 0 \in \mathbb{R}^{Nm}, \ t_0 = 1 \\
+& \text{For } i = 0, 1, \dots, I-1: \\
+& \quad grad = 2 H y_i + g \quad \text{(gradient at } y_i\text{)} \\
+& \quad x_{i+1} = \Pi_{[lo,hi]}( y_i - \alpha \cdot grad ) \quad \text{(proximal step + projection)} \\
+& \quad t_{i+1} = (1 + \sqrt{1 + 4 t_i^2}) / 2 \\
+& \quad y_{i+1} = x_{i+1} + \frac{t_i - 1}{t_{i+1}}(x_{i+1} - x_i) \quad \text{(Nesterov momentum)}
+\end{aligned}$$
 
-**Step size.** The step size `α = 1/L_f` where `L_f = λ_max(2H)` is the Lipschitz
-constant of the gradient `2Hy + g`. The largest eigenvalue is estimated by 60
+**Step size.** The step size $\alpha = 1/L_f$ where $L_f = \lambda_{\max}(2H)$ is the Lipschitz
+constant of the gradient $2Hy + g$. The largest eigenvalue is estimated by 60
 iterations of the **power method**:
 
-```
-v₀ = (1/√Nm) 1_{Nm}
-wₖ₊₁ = H vₖ / ‖H vₖ‖,    λ ≈ ‖H vₖ‖
-```
+$$\begin{aligned}
+v_0 &= (1/\sqrt{Nm})\, \mathbf{1}_{Nm} \\
+w_{k+1} &= H v_k / \lVert H v_k \rVert, \quad \lambda \approx \lVert H v_k \rVert
+\end{aligned}$$
 
-Power iteration converges at rate `(λ₁/λ₂)^k`; for well-conditioned `H` (which is
-typical because `R̄` regularises) 60 iterations is conservative. Adding `10⁻⁹` to
+Power iteration converges at rate $(\lambda_1/\lambda_2)^k$; for well-conditioned $H$ (which is
+typical because $\bar{R}$ regularises) 60 iterations is conservative. Adding $10^{-9}$ to
 the power estimate guarantees a finite step size.
 
-**Convergence.** For `I = 200` iterations the optimality gap satisfies:
+**Convergence.** For $I = 200$ iterations the optimality gap satisfies:
 
-```
-f(xᵢ) − f(x*) ≤ L_f ‖x₀ − x*‖² / (2i²)
-```
+$$f(x_i) - f(x^*) \le L_f \lVert x_0 - x^* \rVert^2 / (2i^2)$$
 
 (Beck & Teboulle Theorem 4.4). In practice, 200 iterations is far more than needed:
-for the horizon and weights used here the iterate changes by less than `10⁻⁸` after
+for the horizon and weights used here the iterate changes by less than $10^{-8}$ after
 ~40 iterations.
 
 ---
@@ -366,21 +349,20 @@ for the horizon and weights used here the iterate changes by less than `10⁻⁸
 ## 5. Sensor Models
 
 All three sensors are modelled at the **object-detection level** (not raw signal level).
-Each sensor checks visibility (range `r ≤ r_max`, bearing `|β| ≤ θ_fov/2`), applies a
-miss probability `p_miss`, and returns a detection with measurement `z ∈ ℝ²` (world
-frame position) and noise covariance `R ∈ ℝ^{2×2}`.
+Each sensor checks visibility (range $r \le r_{max}$, bearing $|\beta| \le \theta_{fov}/2$), applies a
+miss probability $p_{miss}$, and returns a detection with measurement $z \in \mathbb{R}^2$ (world
+frame position) and noise covariance $R \in \mathbb{R}^{2\times 2}$.
 
 ### 5.1 LiDAR
 
 LiDAR has near-isotropic spatial resolution; the noise is modelled as isotropic:
 
-```
-z = [x, y]ᵀ + n,    n ~ N(0, σ²_L I₂),    σ_L = 0.15 m
+$$\begin{aligned}
+z &= [x, y]^\top + n, \quad n \sim \mathcal{N}(0, \sigma_L^2 I_2), \quad \sigma_L = 0.15 \text{ m} \\
+R_L &= \sigma_L^2 I_2
+\end{aligned}$$
 
-R_L = σ²_L I₂
-```
-
-Parameters: `r_max = 80 m`, `θ_fov = 120°`, `p_miss = 0.05`.
+Parameters: $r_{max} = 80$ m, $\theta_{fov} = 120°$, $p_{miss} = 0.05$.
 
 ### 5.2 Radar
 
@@ -388,34 +370,31 @@ Radar has high range resolution but poor cross-range (azimuth) resolution — th
 classic tradeoff for frequency-modulated continuous-wave (FMCW) systems. The noise
 is anisotropic along the line-of-sight (LOS):
 
-```
-Noise in LOS frame:  n_LOS ~ N(0, diag(σ²_r, σ²_lat))
-Noise in world frame: n = Rot(α) n_LOS,    α = ψ_ego + β_detection
+$$\begin{aligned}
+\text{Noise in LOS frame:} \quad & n_{LOS} \sim \mathcal{N}(0, \operatorname{diag}(\sigma_r^2, \sigma_{lat}^2)) \\
+\text{Noise in world frame:} \quad & n = \operatorname{Rot}(\alpha)\, n_{LOS}, \quad \alpha = \psi_{ego} + \beta_{detection} \\
+R_{Radar} &= \operatorname{Rot}(\alpha) \cdot \operatorname{diag}(\sigma_r^2, \sigma_{lat}^2) \cdot \operatorname{Rot}(\alpha)^\top
+\end{aligned}$$
 
-R_Radar = Rot(α) · diag(σ²_r, σ²_lat) · Rot(α)ᵀ
-```
-
-with `σ_r = 0.4 m` (range), `σ_lat = 1.2 m` (lateral). Additionally, radar measures
-the **Doppler radial velocity** `v_r = (vₓ cos α + vᵧ sin α) + n_v`, `n_v ~ N(0, σ²_vr)`,
-`σ_vr = 0.1 m/s`. Parameters: `r_max = 120 m`, `θ_fov = 90°`, `p_miss = 0.05`.
+with $\sigma_r = 0.4$ m (range), $\sigma_{lat} = 1.2$ m (lateral). Additionally, radar measures
+the **Doppler radial velocity** $v_r = (v_x \cos \alpha + v_y \sin \alpha) + n_v$, $n_v \sim \mathcal{N}(0, \sigma_{vr}^2)$,
+$\sigma_{vr} = 0.1$ m/s. Parameters: $r_{max} = 120$ m, $\theta_{fov} = 90°$, $p_{miss} = 0.05$.
 
 ### 5.3 Camera
 
 Camera has high angular (bearing) resolution but poor range resolution, which grows
 with distance (apparent-size-based range estimation):
 
-```
-Bearing noise:      σ_b = 0.6°   (σ_bearing in radians)
-Range relative error: σ_range / r = 10%
+$$\begin{aligned}
+\text{Bearing noise:} \quad & \sigma_b = 0.6° \quad \text{(}\sigma_{bearing}\text{ in radians)} \\
+\text{Range relative error:} \quad & \sigma_{range} / r = 10\% \\
+\text{Noise in polar frame:} \quad & (n_r, n_b) \sim \mathcal{N}(0, \operatorname{diag}((0.10 r)^2, r^2 \sigma_b^2)) \\
+\text{Noise in world frame:} \quad & n = \operatorname{Rot}(\alpha) \cdot [n_r, n_b]^\top \\
+R_{Camera} &= \operatorname{Rot}(\alpha) \cdot \operatorname{diag}((0.10 r)^2, (r \sigma_b)^2) \cdot \operatorname{Rot}(\alpha)^\top
+\end{aligned}$$
 
-Noise in polar frame: (n_r, n_b) ~ N(0, diag((0.10 r)², r² σ²_b))
-Noise in world frame: n = Rot(α) · [n_r, n_b]ᵀ
-
-R_Camera = Rot(α) · diag((0.10 r)², (r σ_b)²) · Rot(α)ᵀ
-```
-
-Parameters: `r_max = 70 m`, `θ_fov = 70°`, `p_miss = 0.04`. Camera also provides
-the object class label `kind ∈ {car, truck, …}`.
+Parameters: $r_{max} = 70$ m, $\theta_{fov} = 70°$, $p_{miss} = 0.04$. Camera also provides
+the object class label $kind \in \{car, truck, \dots\}$.
 
 ---
 
@@ -426,16 +405,15 @@ the object class label `kind ∈ {car, truck, …}`.
 Detections from all three sensors are first clustered to associate measurements that
 refer to the same physical object. Greedy nearest-neighbour with **Mahalanobis gating**:
 
-```
-d²(i, j) = Δzᵢⱼᵀ (Rᵢ + Rⱼ)⁻¹ Δzᵢⱼ < γ_gate = 9.21
+$$\begin{aligned}
+d^2(i, j) &= \Delta z_{ij}^\top (R_i + R_j)^{-1} \Delta z_{ij} < \gamma_{gate} = 9.21 \\
+\Delta z_{ij} &= z_i - z_j
+\end{aligned}$$
 
-Δzᵢⱼ = zᵢ − zⱼ
-```
-
-The gate `γ_gate = 9.21` is the 99th percentile of the χ²(2) distribution, which is
-the chi-squared distribution with 2 degrees of freedom (the dimension of `z`). Using
-the **sum covariance** `Rᵢ + Rⱼ` rather than a fixed Euclidean distance is critical
-for camera detections: a camera at 50 m has `σ_range ≈ 5 m`, so naive Euclidean
+The gate $\gamma_{gate} = 9.21$ is the 99th percentile of the $\chi^2(2)$ distribution, which is
+the chi-squared distribution with 2 degrees of freedom (the dimension of $z$). Using
+the **sum covariance** $R_i + R_j$ rather than a fixed Euclidean distance is critical
+for camera detections: a camera at 50 m has $\sigma_{range} \approx 5$ m, so naive Euclidean
 gating would reject correct associations. The sum-covariance gate treats the camera's
 uncertainty correctly, associating it with a LiDAR detection even when they disagree
 by several metres in range.
@@ -446,29 +424,29 @@ Within each cluster, detections are fused by the **information-form weighted ave
 which is the maximum-likelihood estimate under the assumption of independent Gaussian
 noise:
 
-```
-R_fused⁻¹ = Σᵢ Rᵢ⁻¹                  (sum of Fisher informations)
-z_fused    = R_fused · Σᵢ Rᵢ⁻¹ zᵢ    (information-weighted mean)
-```
+$$\begin{aligned}
+R_{fused}^{-1} &= \sum_i R_i^{-1} \quad \text{(sum of Fisher informations)} \\
+z_{fused} &= R_{fused} \cdot \sum_i R_i^{-1} z_i \quad \text{(information-weighted mean)}
+\end{aligned}$$
 
 This is equivalent to the Kalman update with multiple independent measurements applied
 sequentially (order-invariant). Properties:
-- The fused covariance is always smaller than any individual `Rᵢ`.
-- Sensors with larger uncertainty (smaller `Rᵢ⁻¹`) contribute less to the fused mean.
-- No linearisation is required because all measurements are in the same state space `ℝ²`.
+- The fused covariance is always smaller than any individual $R_i$.
+- Sensors with larger uncertainty (smaller $R_i^{-1}$) contribute less to the fused mean.
+- No linearisation is required because all measurements are in the same state space $\mathbb{R}^2$.
 
 ### 6.3 Velocity prior from Doppler
 
 If the cluster contains a Radar detection, its Doppler reading `v_r` provides a rough
 velocity prior for initialising a new Kalman track:
 
-```
-α_LOS = arctan2(z_fused[1], z_fused[0])           (LOS angle from origin, approximate)
-v_prior = v_r · [cos α_LOS, sin α_LOS]ᵀ
-```
+$$\begin{aligned}
+\alpha_{LOS} &= \operatorname{arctan2}(z_{fused}[1], z_{fused}[0]) \quad \text{(LOS angle from origin, approximate)} \\
+v_{prior} &= v_r \cdot [\cos \alpha_{LOS}, \sin \alpha_{LOS}]^\top
+\end{aligned}$$
 
 This warm-starts the Kalman filter's velocity state, reducing the cold-start velocity
-error from O(v_true) to O(σ_vr · angular_error).
+error from $O(v_{true})$ to $O(\sigma_{vr} \cdot \text{angular\_error})$.
 
 ---
 
@@ -478,111 +456,105 @@ error from O(v_true) to O(σ_vr · angular_error).
 
 Each track's single-model filter uses a constant-velocity prediction model:
 
-```
-State:   x = [xₚ, yₚ, vₓ, vᵧ]ᵀ ∈ ℝ⁴
-Measurement:  z = [xₚ, yₚ]ᵀ   (position only)
-```
+$$\begin{aligned}
+\text{State:} \quad & x = [x_p, y_p, v_x, v_y]^\top \in \mathbb{R}^4 \\
+\text{Measurement:} \quad & z = [x_p, y_p]^\top \quad \text{(position only)}
+\end{aligned}$$
 
 **Process model** (exact discretisation of constant-velocity continuous-time model):
 
-```
-F = [[1, 0, dt, 0 ],
-     [0, 1, 0,  dt],
-     [0, 0, 1,  0 ],
-     [0, 0, 0,  1 ]]
-```
+$$F = \begin{bmatrix}
+1 & 0 & dt & 0 \\
+0 & 1 & 0 & dt \\
+0 & 0 & 1 & 0 \\
+0 & 0 & 0 & 1
+\end{bmatrix}$$
 
 **Process noise** (continuous white-noise acceleration model, discretised):
 
-```
-Q(dt) = σ²_a · [[dt⁴/4,   0,    dt³/2,    0  ],
-                 [0,    dt⁴/4,   0,    dt³/2  ],
-                 [dt³/2,   0,    dt²,     0   ],
-                 [0,    dt³/2,   0,     dt²   ]]
-```
+$$Q(dt) = \sigma_a^2 \cdot \begin{bmatrix}
+dt^4/4 & 0 & dt^3/2 & 0 \\
+0 & dt^4/4 & 0 & dt^3/2 \\
+dt^3/2 & 0 & dt^2 & 0 \\
+0 & dt^3/2 & 0 & dt^2
+\end{bmatrix}$$
 
-This is the standard **Singer model** (Bar-Shalom et al., §6.3) where `σ_a` is the
-acceleration standard deviation. The power-spectral-density matrix is `q(t) = σ²_a · G G ᵀ`,
-`G = [0, 0, 1, 0; 0, 0, 0, 1]ᵀ`, integrated over `dt`.
+This is the standard **Singer model** (Bar-Shalom et al., §6.3) where $\sigma_a$ is the
+acceleration standard deviation. The power-spectral-density matrix is $q(t) = \sigma_a^2 \cdot G G^\top$,
+$G = [0, 0, 1, 0;\ 0, 0, 0, 1]^\top$, integrated over $dt$.
 
 **Measurement model**:
 
-```
-H = [[1, 0, 0, 0],
-     [0, 1, 0, 0]]
-```
+$$H = \begin{bmatrix}
+1 & 0 & 0 & 0 \\
+0 & 1 & 0 & 0
+\end{bmatrix}$$
 
 **Kalman update** (Joseph form for numerical stability is not used here; small
 matrices make catastrophic cancellation unlikely):
 
-```
-ν = z − H x̂                       (innovation)
-S = H P̂ Hᵀ + R                    (innovation covariance)
-K = P̂ Hᵀ S⁻¹                      (Kalman gain)
-x ← x̂ + K ν
-P ← (I − K H) P̂
-```
+$$\begin{aligned}
+\nu &= z - H \hat{x} \quad \text{(innovation)} \\
+S &= H \hat{P} H^\top + R \quad \text{(innovation covariance)} \\
+K &= \hat{P} H^\top S^{-1} \quad \text{(Kalman gain)} \\
+x &\leftarrow \hat{x} + K \nu \\
+P &\leftarrow (I - K H) \hat{P}
+\end{aligned}$$
 
 The update also returns the **innovation likelihood** for IMM weighting:
 
-```
-L(z | x̂, P̂, R) = N(ν; 0, S)  =  exp(−½ νᵀ S⁻¹ ν) / (2π |S|^½)
-```
+$$L(z \mid \hat{x}, \hat{P}, R) = \mathcal{N}(\nu; 0, S) = \exp(-\tfrac{1}{2} \nu^\top S^{-1} \nu) / (2\pi |S|^{1/2})$$
 
 ### 7.2 Interacting Multiple Model (IMM) filter
 
 The IMM (Blom & Bar-Shalom, 1988) maintains two CV models in parallel with different
 process noises:
 
-| Model | σ_a | Behaviour |
+| Model | $\sigma_a$ | Behaviour |
 |---|---|---|
 | Cruise | 0.5 m/s² | Smooth highway cruising |
 | Manoeuvre | 6.0 m/s² | Hard braking or swerving |
 
-The IMM probability vector `μ = [μ₀, μ₁]ᵀ` (sum to 1) reflects which model is
+The IMM probability vector $\mu = [\mu_0, \mu_1]^\top$ (sum to 1) reflects which model is
 currently active. A Markov transition matrix governs mode switching:
 
-```
-Π = [[p_stay,    1−p_stay],    p_stay = 0.95
-     [1−p_stay,  p_stay  ]]
-```
+$$\Pi = \begin{bmatrix}
+p_{stay} & 1 - p_{stay} \\
+1 - p_{stay} & p_{stay}
+\end{bmatrix}, \quad p_{stay} = 0.95$$
 
 **One IMM cycle** (per timestep):
 
 **Step 1 — Interaction (mixing).** Compute the predicted model probabilities:
 
-```
-c̄ⱼ = Σᵢ Πᵢⱼ μᵢ      (normaliser for mode j's mixing)
-```
+$$\bar{c}_j = \sum_i \Pi_{ij} \mu_i \quad \text{(normaliser for mode } j\text{'s mixing)}$$
 
-Compute the mixed initial condition for model `j`:
+Compute the mixed initial condition for model $j$:
 
-```
-x̂⁰ⱼ = Σᵢ (Πᵢⱼ μᵢ / c̄ⱼ) xᵢ
-P̂⁰ⱼ = Σᵢ (Πᵢⱼ μᵢ / c̄ⱼ) [Pᵢ + (xᵢ − x̂⁰ⱼ)(xᵢ − x̂⁰ⱼ)ᵀ]
-```
+$$\begin{aligned}
+\hat{x}^0_j &= \sum_i (\Pi_{ij} \mu_i / \bar{c}_j)\, x_i \\
+\hat{P}^0_j &= \sum_i (\Pi_{ij} \mu_i / \bar{c}_j) \big[ P_i + (x_i - \hat{x}^0_j)(x_i - \hat{x}^0_j)^\top \big]
+\end{aligned}$$
 
-**Step 2 — Mode-conditioned prediction.** Each filter `j` predicts from `(x̂⁰ⱼ, P̂⁰ⱼ)`.
+**Step 2 — Mode-conditioned prediction.** Each filter $j$ predicts from $(\hat{x}^0_j, \hat{P}^0_j)$.
 
-**Step 3 — Mode-conditioned update.** Each filter `j` updates with measurement `z` and
-returns likelihood `Lⱼ = L(z | model j)`.
+**Step 3 — Mode-conditioned update.** Each filter $j$ updates with measurement $z$ and
+returns likelihood $L_j = L(z \mid \text{model } j)$.
 
 **Step 4 — Model probability update.**
 
-```
-μⱼ(new) = Lⱼ c̄ⱼ / Σₖ Lₖ c̄ₖ
-```
+$$\mu_j(\text{new}) = L_j \bar{c}_j / \sum_k L_k \bar{c}_k$$
 
 **Step 5 — Fused estimate.**
 
-```
-x̂_IMM = Σⱼ μⱼ x̂ⱼ
-P_IMM  = Σⱼ μⱼ [Pⱼ + (x̂ⱼ − x̂_IMM)(x̂ⱼ − x̂_IMM)ᵀ]
-```
+$$\begin{aligned}
+\hat{x}_{IMM} &= \sum_j \mu_j \hat{x}_j \\
+P_{IMM} &= \sum_j \mu_j \big[ P_j + (\hat{x}_j - \hat{x}_{IMM})(\hat{x}_j - \hat{x}_{IMM})^\top \big]
+\end{aligned}$$
 
-The **manoeuvre probability `μ₁`** is itself a useful output: it quantifies how
+The **manoeuvre probability $\mu_1$** is itself a useful output: it quantifies how
 aggressively the agent is manoeuvring and can gate downstream cost functions
-(e.g. the planner can penalise proximity to high-`μ₁` agents more heavily).
+(e.g. the planner can penalise proximity to high-$\mu_1$ agents more heavily).
 
 ### 7.3 Multi-object tracking (MOT)
 
@@ -593,16 +565,16 @@ filter and lifecycle counters (`hits`, `misses`, `confirmed`).
 
 1. **Predict.** All tracks run `IMM::predict(dt)`.
 2. **Associate.** Build a list of `(d², track_idx, det_idx)` pairs for all (track, detection)
-   pairs within the gate `γ = 9.21`. Sort ascending and greedily assign in O(n log n):
-   the pair with the smallest `d²` is matched first; both indices are then locked.
+   pairs within the gate $\gamma = 9.21$. Sort ascending and greedily assign in $O(n \log n)$:
+   the pair with the smallest $d^2$ is matched first; both indices are then locked.
 3. **Update.** Matched tracks run `IMM::update(z, R)`. Unmatched tracks increment `misses`.
 4. **Spawn.** Unmatched detections spawn tentative new tracks; velocity is initialised
    from `v_prior` if available (Radar Doppler), otherwise zero.
-5. **Prune.** Tracks with `misses > max_miss = 5` are deleted. Tracks with
-   `hits ≥ min_hits = 3` are promoted to `confirmed`.
+5. **Prune.** Tracks with $misses > max\_miss = 5$ are deleted. Tracks with
+   $hits \ge min\_hits = 3$ are promoted to `confirmed`.
 
-The **Mahalanobis gate** `d² = νᵀ S⁻¹ ν < γ` prevents false associations beyond
-the sensor noise level. `γ = 9.21` corresponds to 99% containment under the
+The **Mahalanobis gate** $d^2 = \nu^\top S^{-1} \nu < \gamma$ prevents false associations beyond
+the sensor noise level. $\gamma = 9.21$ corresponds to 99% containment under the
 true Gaussian model; the 1% of true detections that fall outside the gate are handled
 by new-track spawning.
 
@@ -626,26 +598,25 @@ lane changes.
 ### 8.2 Longitudinal: Intelligent Driver Model (IDM)
 
 The IDM (Treiber et al., 2000) generates a smooth acceleration from the ego speed
-`v`, the gap to the lead `s`, and the lead speed `v_lead`:
+$v$, the gap to the lead $s$, and the lead speed $v_{lead}$:
 
-```
-s*(v, Δv) = s₀ + max(0, v T + v Δv / (2 √(a b)))
+$$\begin{aligned}
+s^*(v, \Delta v) &= s_0 + \max\!\big(0,\ v T + v \Delta v / (2 \sqrt{a b})\big) \\
+a_{IDM} &= a \big[1 - (v/v_{des})^4 - (s^*/s)^2\big]
+\end{aligned}$$
 
-a_IDM = a [1 − (v/v_des)⁴ − (s*/s)²]
-```
-
-Parameters: `a = 1.5 m/s²` (max acceleration), `b = 2.0 m/s²` (comfortable deceleration),
-`T = 1.5 s` (desired time headway), `s₀ = 5.0 m` (minimum jam distance),
-`v_des = 13.0 m/s` (desired speed). The IDM produces a continuous speed profile over
+Parameters: $a = 1.5$ m/s² (max acceleration), $b = 2.0$ m/s² (comfortable deceleration),
+$T = 1.5$ s (desired time headway), $s_0 = 5.0$ m (minimum jam distance),
+$v_{des} = 13.0$ m/s (desired speed). The IDM produces a continuous speed profile over
 the planning horizon:
 
-```
-v[k+1] = max(0, v[k] + a_IDM(v[k], s[k], v_lead[k]) · dt)
-x[k+1] = x[k] + v[k] · dt
-```
+$$\begin{aligned}
+v[k+1] &= \max(0,\ v[k] + a_{IDM}(v[k], s[k], v_{lead}[k]) \cdot dt) \\
+x[k+1] &= x[k] + v[k] \cdot dt
+\end{aligned}$$
 
 For each candidate lane, the nearest predicted in-lane lead is identified at each
-step `k`; if no lead exists, the free-road model is used (`s → ∞`).
+step $k$; if no lead exists, the free-road model is used ($s \to \infty$).
 
 **Why IDM over a simpler PID?** IDM intrinsically encodes the social force model: it
 does not produce stop-and-go chatter at the boundary between following and free-flow,
@@ -654,42 +625,42 @@ with a fixed target speed cannot model this regime transition.
 
 ### 8.3 Lateral: smoothstep lane-change profile
 
-The lateral profile interpolates smoothly between the current lane `y₀` and the
-target lane `y_target`:
+The lateral profile interpolates smoothly between the current lane $y_0$ and the
+target lane $y_{target}$:
 
-```
-σ(t; a, b) = clamp((t−a)/(b−a), 0, 1)
-y(t) = y₀ + (y_target − y₀) · [ 3σ² − 2σ³ ]   (smoothstep, C¹ continuous)
-```
+$$\begin{aligned}
+\sigma(t; a, b) &= \operatorname{clamp}((t-a)/(b-a),\ 0,\ 1) \\
+y(t) &= y_0 + (y_{target} - y_0) \cdot [ 3\sigma^2 - 2\sigma^3 ] \quad \text{(smoothstep, } C^1 \text{ continuous)}
+\end{aligned}$$
 
-`t_change = 3.0 s` is the lane-change duration. The smoothstep has zero first derivative
-at `t = a` and `t = b`, so the lateral jerk is bounded (no impulse at the start or
-end of the manoeuvre). The lateral curvature `κ = ÿ / (1 + ẏ²)^{3/2}` implied by
+$t_{change} = 3.0$ s is the lane-change duration. The smoothstep has zero first derivative
+at $t = a$ and $t = b$, so the lateral jerk is bounded (no impulse at the start or
+end of the manoeuvre). The lateral curvature $\kappa = \ddot{y} / (1 + \dot{y}^2)^{3/2}$ implied by
 the smoothstep is then used by the controller.
 
 ### 8.4 Multi-lane candidate evaluation
 
-For each candidate lane `y_target ∈ {0.0, LANE}`, a trajectory `(x[k], y[k], v[k])`
+For each candidate lane $y_{target} \in \{0.0, \text{LANE}\}$, a trajectory $(x[k], y[k], v[k])$
 is generated and scored. The cost function is:
 
-```
-cost = w₁ E[‖v − v_des‖²]            (speed keeping)
-     − w₂ (x[M] − x[0])             (progress reward, negative = maximise)
-     + w₃ max_k(v[k]² |κ[k]|)       (comfort: max lateral acceleration)
-     + w₄ [target ≠ ego_lane]        (lane-change cost)
-     + w₅ |target_lane|             (right-lane preference, positive y = left)
-     + w₆ / max(min_clear, 10⁻³)    (margin penalty, soft)
+$$\begin{aligned}
+\text{cost} = {}& w_1\, \mathbb{E}[\lVert v - v_{des} \rVert^2] && \text{(speed keeping)} \\
+& - w_2\, (x[M] - x[0]) && \text{(progress reward, negative = maximise)} \\
+& + w_3\, \max_k(v[k]^2 |\kappa[k]|) && \text{(comfort: max lateral acceleration)} \\
+& + w_4\, [\text{target} \ne \text{ego\_lane}] && \text{(lane-change cost)} \\
+& + w_5\, |\text{target\_lane}| && \text{(right-lane preference, positive } y = \text{ left)} \\
+& + w_6 / \max(\text{min\_clear}, 10^{-3}) && \text{(margin penalty, soft)}
+\end{aligned}$$
 
-w = [1.0, 0.4, 4.0, 6.0, 1.0, 30.0]
-```
+$$w = [1.0, 0.4, 4.0, 6.0, 1.0, 30.0]$$
 
 **Safety rejection (hard constraint).** The minimum clearance to any predicted agent
-at any horizon step is computed. If `min_clear < safe_radius = 4.5 m`, the candidate
+at any horizon step is computed. If $\text{min\_clear} < \text{safe\_radius} = 4.5$ m, the candidate
 is set to `None` (infeasible). This is the planner's own collision avoidance layer,
 independent of the guardrail.
 
 **Emergency fallback.** If all candidates are infeasible, the planner returns a
-decelerating trajectory at `1.5b` in the current lane with label `EMERGENCY_SLOW`.
+decelerating trajectory at $1.5b$ in the current lane with label `EMERGENCY_SLOW`.
 The guardrail then takes over with RSS-derived braking.
 
 ---
@@ -698,39 +669,34 @@ The guardrail then takes over with RSS-derived braking.
 
 The guardrail is an **independent monitor** that re-derives safety from the world
 model without trusting the planner's reasoning. It operates on the proposed actuator
-command `(a, δ)` and may veto it, substituting a fail-safe response.
+command $(a, \delta)$ and may veto it, substituting a fail-safe response.
 
 ### 9.1 Longitudinal RSS (Shalev-Shwartz et al., 2017)
 
-**Worst-case distance.** Consider the ego vehicle at speed `v_ego` and a lead vehicle
-at speed `v_lead`. In the worst case:
+**Worst-case distance.** Consider the ego vehicle at speed $v_{ego}$ and a lead vehicle
+at speed $v_{lead}$. In the worst case:
 
-- The lead brakes immediately at maximum deceleration `b_lead`.
-- The ego accelerates for its reaction time `ρ` before braking at minimum capability `b_min`.
+- The lead brakes immediately at maximum deceleration $b_{lead}$.
+- The ego accelerates for its reaction time $\rho$ before braking at minimum capability $b_{min}$.
 
 The minimum safe following distance (stopping-distance argument) is:
 
-```
-d_RSS(v_ego, v_lead) = v_ego ρ + ½ a_ego ρ² + (v_ego + ρ a_ego)² / (2 b_min)
-                      − v_lead² / (2 b_lead)
-```
+$$d_{RSS}(v_{ego}, v_{lead}) = v_{ego}\, \rho + \tfrac{1}{2} a_{ego}\, \rho^2 + (v_{ego} + \rho a_{ego})^2 / (2 b_{min}) - v_{lead}^2 / (2 b_{lead})$$
 
-clamped to 0. Parameters: `ρ = 0.4 s`, `a_ego = 1.0 m/s²`, `b_min = 4.0 m/s²`,
-`b_lead = 8.0 m/s²`. If the actual gap `< d_RSS`, the guardrail triggers.
+clamped to 0. Parameters: $\rho = 0.4$ s, $a_{ego} = 1.0$ m/s², $b_{min} = 4.0$ m/s²,
+$b_{lead} = 8.0$ m/s². If the actual gap $< d_{RSS}$, the guardrail triggers.
 
-**Physical interpretation.** `v_ego ρ + ½ a_ego ρ²` is the distance the ego travels
-during reaction time while still accelerating. `(v_ego + ρ a_ego)² / (2 b_min)` is
-the subsequent stopping distance. `v_lead² / (2 b_lead)` is the lead vehicle's
+**Physical interpretation.** $v_{ego}\, \rho + \tfrac{1}{2} a_{ego}\, \rho^2$ is the distance the ego travels
+during reaction time while still accelerating. $(v_{ego} + \rho a_{ego})^2 / (2 b_{min})$ is
+the subsequent stopping distance. $v_{lead}^2 / (2 b_{lead})$ is the lead vehicle's
 stopping distance (subtracted because the lead also stops). The formula guarantees
 no collision under the stated worst-case model.
 
 ### 9.2 Time-to-collision (TTC)
 
-```
-TTC = gap / (v_ego − v_lead)    [if v_ego > v_lead]
-```
+$$\text{TTC} = \text{gap} / (v_{ego} - v_{lead}) \quad [\text{if } v_{ego} > v_{lead}]$$
 
-Triggers when `TTC < 2.5 s`. TTC is a complementary check to RSS: it catches close
+Triggers when $\text{TTC} < 2.5$ s. TTC is a complementary check to RSS: it catches close
 following at matched speeds where the RSS distance is satisfied (no closing velocity)
 but the absolute gap is dangerously small.
 
@@ -741,17 +707,15 @@ are simultaneously violated (Shalev-Shwartz et al., §4). The guardrail checks b
 
 **Lateral RSS distance:**
 
-```
-d_lat(v_lat) = μ + v_lat ρ + ½ a_lat_max ρ² + (v_lat + ρ a_lat_max)² / (2 b_lat_min)
-```
+$$d_{lat}(v_{lat}) = \mu + v_{lat}\, \rho + \tfrac{1}{2} a_{lat\_max}\, \rho^2 + (v_{lat} + \rho a_{lat\_max})^2 / (2 b_{lat\_min})$$
 
-where `μ = 0.5 m` is a clearance buffer, `a_lat_max = 0.5 m/s²`, `b_lat_min = 1.0 m/s²`.
+where $\mu = 0.5$ m is a clearance buffer, $a_{lat\_max} = 0.5$ m/s², $b_{lat\_min} = 1.0$ m/s².
 
 **Cut-in criterion** (both must hold simultaneously):
 
-1. Agent is approaching laterally: `(y_agent − y_ego) · vy_agent < 0`.
-2. Lateral gap `|y_agent − y_ego| < d_lat(|vy_agent|)`.
-3. Longitudinal gap within the RSS band: `-L_veh ≤ (x_agent − x_ego) ≤ d_RSS + L_veh`.
+1. Agent is approaching laterally: $(y_{agent} - y_{ego}) \cdot vy_{agent} < 0$.
+2. Lateral gap $|y_{agent} - y_{ego}| < d_{lat}(|vy_{agent}|)$.
+3. Longitudinal gap within the RSS band: $-L_{veh} \le (x_{agent} - x_{ego}) \le d_{RSS} + L_{veh}$.
 
 When both 2 and 3 hold, the correct RSS response — no safe lateral evasion — is
 **longitudinal braking**.
@@ -760,15 +724,15 @@ When both 2 and 3 hold, the correct RSS response — no safe lateral evasion —
 
 When any check triggers:
 
-```
-latch ← hold = 8    (0.8 s at dt = 0.1 s)
-response: a = −b_emergency = −6 m/s², δ = δ_previous (hold steering)
-```
+$$\begin{aligned}
+& \text{latch} \leftarrow \text{hold} = 8 \quad \text{(0.8 s at } dt = 0.1 \text{ s)} \\
+& \text{response: } a = -b_{emergency} = -6 \text{ m/s}^2, \ \delta = \delta_{previous} \text{ (hold steering)}
+\end{aligned}$$
 
-Each step, `latch` decrements. The guardrail overrides until `latch = 0`. This
+Each step, `latch` decrements. The guardrail overrides until $\text{latch} = 0$. This
 prevents the boundary oscillation that would occur if the override deactivated as
 soon as the RSS condition cleared (the ego would still be closing at the boundary).
-By the time the latch expires, the ego has decelerated by `b_emergency · 0.8 ≈ 4.8 m/s`,
+By the time the latch expires, the ego has decelerated by $b_{emergency} \cdot 0.8 \approx 4.8$ m/s,
 typically enough to restore a safe gap margin.
 
 ---
@@ -781,16 +745,15 @@ the planner.
 
 ### 10.1 Occupancy model
 
-Each predicted agent trajectory `{(xₖ, yₖ)}_{k=0}^{K}` is splatted as an
+Each predicted agent trajectory $\{(x_k, y_k)\}_{k=0}^{K}$ is splatted as an
 axis-aligned Gaussian representing the agent's footprint with time-growing uncertainty:
 
-```
-σ(k) = σ₀ + γ k       (uncertainty inflation)
+$$\begin{aligned}
+\sigma(k) &= \sigma_0 + \gamma k \quad \text{(uncertainty inflation)} \\
+P_i(\text{cell} \mid \text{horizon } k) &= \exp\!\big[-\tfrac{1}{2} \big( (X - x_k)^2 / (car_l + \sigma)^2 + (Y - y_k)^2 / (car_w + \sigma)^2 \big)\big]
+\end{aligned}$$
 
-Pᵢ(cell | horizon k) = exp[−½ ((X − xₖ)² / (car_l + σ)² + (Y − yₖ)² / (car_w + σ)²)]
-```
-
-with `σ₀ = 0.6 m`, `γ = 0.06 m/step`, `car_l = 2.2 m` (half-length), `car_w = 0.9 m`
+with $\sigma_0 = 0.6$ m, $\gamma = 0.06$ m/step, $car_l = 2.2$ m (half-length), $car_w = 0.9$ m
 (half-width). The Gaussian spread grows linearly with horizon, reflecting the
 increasing uncertainty in predicted agent positions.
 
@@ -798,9 +761,7 @@ increasing uncertainty in predicted agent positions.
 
 Multiple agents are combined by the **probabilistic OR** (union of independent events):
 
-```
-P(cell occupied) = 1 − ∏ᵢ (1 − Pᵢ(cell))
-```
+$$P(\text{cell occupied}) = 1 - \prod_i (1 - P_i(\text{cell}))$$
 
 This is equivalent to treating each agent as independently occupying the cell, which
 is conservative (it overestimates risk when agents are correlated). The probabilistic
@@ -809,14 +770,14 @@ double-counting.
 
 ### 10.3 Downstream use
 
-- **Soft cost** (planner): integrate `P(occupied)` along a candidate trajectory to
+- **Soft cost** (planner): integrate $P(\text{occupied})$ along a candidate trajectory to
   augment the clearance term.
-- **Hard veto** (guardrail): block any planned trajectory where `max_k P(cell) > threshold`.
+- **Hard veto** (guardrail): block any planned trajectory where $\max_k P(\text{cell}) > \text{threshold}$.
 - **Visualisation** (`run_pipeline.py`): display the map at each timestep.
 
 **Correctness guarantee.** The `test_occupancy` test verifies:
-- Peak occupancy > 0.8 within 0.5 s of a confirmed agent.
-- The area of cells with `P > 0.5` grows from horizon 5 to horizon 30 (uncertainty inflation).
+- Peak occupancy $> 0.8$ within 0.5 s of a confirmed agent.
+- The area of cells with $P > 0.5$ grows from horizon 5 to horizon 30 (uncertainty inflation).
 
 ---
 
@@ -827,14 +788,14 @@ the entry-point scripts.
 
 | Test | Metric | Result |
 |---|---|---|
-| Bicycle linearisation residual | `‖Φ(s+δs) − (Φ(s) + A δs)‖ / ‖δs‖` | **2.3 × 10⁻⁶** (second-order ✓) |
-| LQR steady-state cross-track | `|e_y|` at steady state, double-LC | **8.6 × 10⁻¹⁴ m** |
-| MPC speed tracking | `|v − v_des|` at steady state | **< 10⁻⁴ m/s** |
-| MPC max acceleration | `|a|` during speed-up | **3.00 m/s²** (limit = 3.0 ✓) |
-| MPC max steering | `|δ|` during lateral recovery | **0.600 rad** (limit = 0.6 ✓) |
+| Bicycle linearisation residual | $\lVert \Phi(s+\delta s) - (\Phi(s) + A \delta s) \rVert / \lVert \delta s \rVert$ | **$2.3 \times 10^{-6}$** (second-order ✓) |
+| LQR steady-state cross-track | $\lvert e_y \rvert$ at steady state, double-LC | **$8.6 \times 10^{-14}$ m** |
+| MPC speed tracking | $\lvert v - v_{des} \rvert$ at steady state | **$< 10^{-4}$ m/s** |
+| MPC max acceleration | $\lvert a \rvert$ during speed-up | **3.00 m/s²** (limit = 3.0 ✓) |
+| MPC max steering | $\lvert \delta \rvert$ during lateral recovery | **0.600 rad** (limit = 0.6 ✓) |
 | IMM tracking position error | mean position RMSE after warm-up (3 s) | **< 0.6 m** |
 | IMM tracking velocity error | mean velocity RMSE | **< 1.2 m/s** |
-| IMM manoeuvre detection | `p_man` before/after hard brake | rises significantly ✓ |
+| IMM manoeuvre detection | $p_{man}$ before/after hard brake | rises significantly ✓ |
 | Guardrail — nominal IDM | collision in hard-brake scenario | **None** (safe) |
 | Guardrail — faulty planner, OFF | collision in hard-brake scenario | **Yes** (expected) |
 | Guardrail — faulty planner, ON | collision in hard-brake scenario | **None** (caught) |

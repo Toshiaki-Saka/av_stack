@@ -13,7 +13,7 @@ argument runs out.
   speed in the synthetic simulator, with a fixed set of scripted agents
   (lead brake, cut-in, mixed). Speed range 0–20 m/s. Scope covers the functional
   safety of the guardrail layer, not the nominal performance of the planner.
-- **A1 (assumption).** The RSS parameters (`ρ`, `b`, `b_lead`) are calibrated
+- **A1 (assumption).** The RSS parameters ($\rho$, $b$, $b_{lead}$) are calibrated
   for the agent braking profiles used in the simulator. Mis-calibration is the
   main residual risk (see G4).
 - **J1 (justification).** The planner (IDM + lane-change scorer) is argued as a
@@ -65,9 +65,9 @@ fallback (emergency braking at −6 m/s², steering held for stability, latch fo
 **G3.1 / G3.2 detail (longitudinal).**
 
 `scenario_hard_brake`: lead brakes at 8 m/s² (maximum parameterised). The IDM
-planner reacts but its comfortable-deceleration assumption (`b = 2.0 m/s²`) means
+planner reacts but its comfortable-deceleration assumption ($b = 2.0$ m/s²) means
 it closes the gap before the full brake is projected. The guardrail uses worst-case
-parameters (`b_lead = 8.0 m/s²`) and fires the RSS check before contact:
+parameters ($b_{lead} = 8.0$ m/s²) and fires the RSS check before contact:
 
 ```
 without guardrail:  rear-end at t ≈ 4.2 s   (gap → −0.8 m)
@@ -79,8 +79,8 @@ Reproduced by `tests/test_modules.py::test_guardrail_pipeline`.
 **G3.3 detail (lateral cut-in).**
 
 `scenario_cut_in`: neighbour in the left lane moves into the ego lane starting at
-`t = 1 s`. The lateral RSS check monitors the combined condition (lateral gap
-below `μ + Σ lateral travel` **and** longitudinal gap within the RSS band). It
+$t = 1$ s. The lateral RSS check monitors the combined condition (lateral gap
+below $\mu + \sum \text{lateral travel}$ **and** longitudinal gap within the RSS band). It
 fires approximately 1.5 s before the neighbour would reach lateral overlap with
 the ego footprint, giving the guardrail time to brake before the lateral hazard
 becomes unavoidable.
@@ -88,7 +88,7 @@ becomes unavoidable.
 **G3.4 detail (planner fault injection).**
 
 `run_pipeline.py` with `fault=True` simulates a degraded planning channel:
-`T = 0.2 s` (tailgating), `b = 1.0 m/s²` (barely braking), `safe_radius = 0`
+$T = 0.2$ s (tailgating), $b = 1.0$ m/s² (barely braking), $safe\_radius = 0$
 (collision avoidance disabled). This is the "primary-channel failure" the
 independent safety layer exists to catch. The guardrail is not notified of the
 fault; it re-derives safety from the world-model tracks and overrides the faulted
@@ -102,15 +102,15 @@ planner's commands throughout the hazard window.
 
 ### R1 — RSS parameter calibration
 
-The RSS safe-distance formula uses `ρ`, `b`, `b_lead`. If the real lead decelerates
-harder than `b_lead`, or if ego's reaction time is longer than `ρ`, the computed
-`d_RSS` will be an underestimate. In the simulator, `b_lead = 8.0 m/s²` matches the
+The RSS safe-distance formula uses $\rho$, $b$, $b_{lead}$. If the real lead decelerates
+harder than $b_{lead}$, or if ego's reaction time is longer than $\rho$, the computed
+$d_{RSS}$ will be an underestimate. In the simulator, $b_{lead} = 8.0$ m/s² matches the
 maximum scripted agent deceleration, so the parameter is correctly calibrated.
 
-For a real deployment, `b_lead` should be set conservatively (tighter than the
+For a real deployment, $b_{lead}$ should be set conservatively (tighter than the
 worst expected lead deceleration) to absorb calibration uncertainty. The effect is
-linear: a 1 m/s² error in `b_lead` translates to roughly 0.2–0.5 m error in
-`d_RSS` at 12 m/s.
+linear: a 1 m/s² error in $b_{lead}$ translates to roughly 0.2–0.5 m error in
+$d_{RSS}$ at 12 m/s.
 
 ### R2 — unmodelled hazard classes
 
@@ -121,7 +121,7 @@ The guardrail monitors:
 It does **not** currently monitor:
 - Pedestrian or cyclist cross-traffic (out of ODD)
 - Lateral collision with a stationary object at the road edge
-- Adverse weather reducing braking capability (b_min not modelled)
+- Adverse weather reducing braking capability ($b_{min}$ not modelled)
 
 These are out of scope for the synthetic two-lane ODD but would require additional
 sub-goals in a real deployment.
