@@ -1,5 +1,7 @@
 # Requirements Traceability
 
+> English version: [`../docs_en/requirements_traceability.md`](../docs_en/requirements_traceability.md)
+
 HARA (`hara.md`) から導出した安全目標 → 技術要求 → 実装コンポーネントの対応表。
 例示目的のトレーサビリティ文書であり、実際の安全審査の成果物ではない。
 

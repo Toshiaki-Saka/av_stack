@@ -62,9 +62,14 @@ pip install -r requirements.txt
 python python/animation_demo.py          # real-time animation, no C++ required
 ```
 
-**Further reading:** [`ARCHITECTURE.md`](ARCHITECTURE.md) (module-by-module
-walkthrough) · [`SAFETY_CASE.md`](SAFETY_CASE.md) (the RSS/guardrail safety
-argument) · [`README.ja.md`](README.ja.md) (日本語概要).
+**Further reading** — all documentation lives in [`docs_en/`](docs_en/) (English) and
+[`docs_ja/`](docs_ja/) (Japanese):
+[`ARCHITECTURE.md`](docs_en/ARCHITECTURE.md) (module-by-module walkthrough) ·
+[`SAFETY_CASE.md`](docs_en/SAFETY_CASE.md) (the RSS/guardrail safety argument) ·
+[`TECHNICAL.md`](docs_en/TECHNICAL.md) (derivations and implementation notes) ·
+[`hara.md`](docs_en/hara.md) · [`requirements_traceability.md`](docs_en/requirements_traceability.md).
+
+**日本語:** [`README.ja.md`](README.ja.md) · [`docs_ja/`](docs_ja/)
 
 ---
 
@@ -115,8 +120,13 @@ tests/test_control.py · test_modules.py · test_localization.py
 tests/test_safety.py · test_hybrid.py
 
 README.md / README.ja.md            # overview (English / Japanese)
-ARCHITECTURE.md                     # in-depth module-by-module walkthrough
-SAFETY_CASE.md                      # GSN safety-case argument for the RSS guardrail
+docs_en/                            # documentation, English
+  ARCHITECTURE.md                   #   in-depth module-by-module walkthrough
+  SAFETY_CASE.md                    #   GSN safety-case argument for the RSS guardrail
+  TECHNICAL.md                      #   derivations and implementation notes
+  hara.md                           #   hazard analysis and risk assessment
+  requirements_traceability.md      #   safety goal -> requirement -> component -> test
+docs_ja/                            # the same five documents, Japanese
 LICENSE                             # MIT
 requirements.txt / build.sh         # dependencies + one-command build & self-check
 assets/                             # generated figures

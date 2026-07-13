@@ -1,5 +1,7 @@
 # Technical Reference: av_stack — A Modular Autonomous Driving Stack
 
+> Japanese version: [`../docs_ja/TECHNICAL.md`](../docs_ja/TECHNICAL.md)
+
 > **Reading level:** This document assumes familiarity with state-space control theory,
 > Bayesian filtering, and convex optimisation. The goal is to give a reader the
 > mathematical foundation to reproduce, extend, or audit every algorithm in the stack —
@@ -711,7 +713,7 @@ $$d_{lat}(v_{lat}) = \mu + v_{lat}\, \rho + \tfrac{1}{2} a_{lat\_max}\, \rho^2 +
 
 where $\mu = 0.5$ m is a clearance buffer, $a_{lat\_max} = 0.5$ m/s², $b_{lat\_min} = 1.0$ m/s².
 
-**Cut-in criterion** (both must hold simultaneously):
+**Cut-in criterion** (all must hold simultaneously):
 
 1. Agent is approaching laterally: $(y_{agent} - y_{ego}) \cdot vy_{agent} < 0$.
 2. Lateral gap $|y_{agent} - y_{ego}| < d_{lat}(|vy_{agent}|)$.

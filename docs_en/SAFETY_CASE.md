@@ -1,5 +1,7 @@
 # Safety Case — Modular AV Stack Guardrail
 
+> Japanese version: [`../docs_ja/SAFETY_CASE.md`](../docs_ja/SAFETY_CASE.md)
+
 A worked, deliberately *modest* assurance argument for the RSS-based safety
 guardrail in this repository, structured in **Goal Structuring Notation (GSN)**.
 It is a teaching artifact, not a certification: the operating context is a

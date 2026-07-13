@@ -7,9 +7,14 @@
 
 外部依存なし（ROS 不要・外部データセット不要・GPU 不要）で完結します。
 合成の多車線走行シミュレータがシナリオと閉ループ試験環境を提供します。
-詳細・全結果は英語版 [`README.md`](README.md)、設計解説は
-[`ARCHITECTURE.md`](ARCHITECTURE.md)、安全論証は
-[`SAFETY_CASE.md`](SAFETY_CASE.md) を参照してください。
+
+日本語ドキュメントは [`docs_ja/`](docs_ja/) に、英語版は [`docs_en/`](docs_en/) に
+揃えてあります。設計解説は [`ARCHITECTURE.md`](docs_ja/ARCHITECTURE.md)、
+安全論証は [`SAFETY_CASE.md`](docs_ja/SAFETY_CASE.md)、理論と実装の詳細は
+[`TECHNICAL.md`](docs_ja/TECHNICAL.md)、ハザード分析は [`hara.md`](docs_ja/hara.md)、
+要求トレーサビリティは
+[`requirements_traceability.md`](docs_ja/requirements_traceability.md) を参照してください。
+全結果を含む英語版の概要は [`README.md`](README.md) にあります。
 
 ```
 センサー群 ──► 知覚（融合） ──► 追跡器 ──► プランナー ──► 制御器 ──► 車両

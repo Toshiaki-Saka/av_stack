@@ -1,5 +1,7 @@
 # Architecture & module walkthrough
 
+> Japanese version: [`../docs_ja/ARCHITECTURE.md`](../docs_ja/ARCHITECTURE.md)
+
 A guided tour of the codebase for a reader who wants to understand *how* each
 piece works and *why* it is built that way. The stack is **C++-first**: every
 pipeline algorithm — the controllers, the IMM tracker, sensors, perception,

@@ -1,12 +1,14 @@
 """
-av-stack アニメーションデモ (ピュアPython版 — C++ビルド不要)
+av-stack animation demo (pure Python — no C++ build required)
 
-perception -> world model -> planning (IDM) -> safety guardrail -> controller
-の全パイプラインをPythonで再実装し、リアルタイムアニメーションで可視化する。
+Reimplements the whole pipeline — perception -> world model -> planning (IDM) ->
+safety guardrail -> controller — in Python and visualises it as a real-time
+animation.
 
-シナリオ:
-  * 自車 (青) が巡航中に前方車 (橙) が急制動 → guardrail が緊急ブレーキ
-  * 左隣レーンの車 (緑) が割り込み → lateral RSS が発動
+Scenarios:
+  * The ego (blue) is cruising when the lead vehicle (orange) brakes hard
+    -> the guardrail commands emergency braking.
+  * A vehicle in the left lane (green) cuts in -> lateral RSS fires.
 """
 import sys
 import numpy as np

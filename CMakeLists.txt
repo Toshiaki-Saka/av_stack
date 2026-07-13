@@ -12,10 +12,10 @@ else()
   add_compile_options(-O2 -Wall)
 endif()
 
-# --- av_stack 独自の include (ad/* ヘッダも同梱) ---
+# --- av_stack's own includes (the ad/* headers are bundled here too) ---
 include_directories(${CMAKE_SOURCE_DIR}/cpp/include)
 
-# SpeedGovernor (.cpp あり) → 静的ライブラリとしてビルド
+# SpeedGovernor has a .cpp, so build it as a static library
 add_library(ad_safety STATIC cpp/src/safety/speed_governor.cpp)
 target_include_directories(ad_safety PUBLIC ${CMAKE_SOURCE_DIR}/cpp/include)
 if(MSVC)

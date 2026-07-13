@@ -1,5 +1,7 @@
 # Hazard Analysis and Risk Assessment (HARA)
 
+> English version: [`../docs_en/hara.md`](../docs_en/hara.md)
+
 ## 対象アイテム
 
 **av_stack** 自律走行スタック (デモンストレータ)
