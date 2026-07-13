@@ -36,6 +36,15 @@ public:
     int    hold;         // override hold duration [steps]
     bool   use_lateral;  // enable lateral (cut-in) RSS check
 
+    // Lateral RSS parameters (Shalev-Shwartz lateral safe distance). These are
+    // distinct from the longitudinal ones: a lane change is a far gentler
+    // manoeuvre than braking, so reusing a_accel_max / b_min here would model
+    // the wrong worst case.
+    double mu;           // lateral clearance buffer [m]
+    double a_lat_max;    // worst-case lateral acceleration [m/s²]
+    double b_lat_min;    // min lateral braking capability [m/s²]
+    double veh_len;      // vehicle length, for the longitudinal RSS band [m]
+
     static constexpr double _MAX_VY = 3.0;  // ghost-track lateral speed filter
 
     explicit Guardrail(double rho_         = 0.4,
@@ -45,11 +54,17 @@ public:
                        double b_emergency_ = 6.0,
                        double ttc_min_     = 2.5,
                        int    hold_        = 15,
-                       bool   use_lateral_ = true)
+                       bool   use_lateral_ = true,
+                       double mu_          = 0.5,
+                       double a_lat_max_   = 0.5,
+                       double b_lat_min_   = 1.0,
+                       double veh_len_     = 4.5)
         : rho(rho_), a_accel_max(a_accel_max_),
           b_min(b_min_), b_max_lead(b_max_lead_),
           b_emergency(b_emergency_), ttc_min(ttc_min_),
-          hold(hold_), use_lateral(use_lateral_), _hold_counter(0) {}
+          hold(hold_), use_lateral(use_lateral_),
+          mu(mu_), a_lat_max(a_lat_max_), b_lat_min(b_lat_min_),
+          veh_len(veh_len_), _hold_counter(0) {}
 
     // RSS longitudinal safe distance [m]
     double rss_min_distance(double v_ego, double v_lead) const {
@@ -61,12 +76,21 @@ public:
         return std::max(0.0, s_star);
     }
 
-    // RSS lateral safe distance [m] given other's lateral speed
+    // Lateral distance a vehicle covers if it accelerates laterally at a_lat_max for
+    // rho, then brakes at b_lat_min to a lateral stop (the RSS worst case).
+    double lat_travel(double v_toward) const {
+        double v = std::max(0.0, v_toward);
+        return v * rho
+            + 0.5 * a_lat_max * rho * rho
+            + (v + rho * a_lat_max) * (v + rho * a_lat_max) / (2.0 * b_lat_min);
+    }
+
+    // RSS lateral safe distance [m] given the other vehicle's lateral speed.
+    // Ego is treated as laterally stationary; both parties react for rho and then
+    // brake laterally. Below this distance (plus buffer mu) the lateral situation
+    // is unsafe. See docs/TECHNICAL.md 9.3.
     double rss_lateral_min_distance(double v_other_lat) const {
-        auto lat_travel = [&](double vy) {
-            return std::max(0.0, vy * rho + 0.5 * a_accel_max * rho * rho);
-        };
-        return 0.1 + lat_travel(0.0) + lat_travel(std::abs(v_other_lat));
+        return mu + lat_travel(0.0) + lat_travel(std::abs(v_other_lat));
     }
 
     // Evaluate one guardrail check step.
@@ -153,11 +177,12 @@ private:
             double d_lat_min = rss_lateral_min_distance(t.vy);
             if (std::abs(dy) >= d_lat_min) continue;
 
-            // Longitudinal: within RSS distance
-            if (t.x <= ego[0]) continue;
+            // Longitudinal: inside the RSS band. The band extends one vehicle length
+            // behind the ego, because a neighbour merging alongside is a hazard even
+            // when its nose has not yet passed the ego's.
             double gap   = t.x - ego[0];
             double d_rss = rss_min_distance(v_ego, std::max(0.0, t.vx));
-            if (gap < d_rss) return true;
+            if (-veh_len <= gap && gap <= d_rss + veh_len) return true;
         }
         return false;
     }

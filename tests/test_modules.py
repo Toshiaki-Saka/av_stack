@@ -76,8 +76,11 @@ def test_lateral_rss():
     lon  = RP.run(W.scenario_cut_in, True, steps=90, use_lateral=False, planner_fault=True)
     full = RP.run(W.scenario_cut_in, True, steps=90, use_lateral=True,  planner_fault=True)
     assert full["react_t"] is not None and lon["react_t"] is not None
-    assert full["react_t"] <= lon["react_t"] + 1e-9, "lateral RSS should react no later"
-    assert full["min_dist"] >= lon["min_dist"] - 0.5, "lateral RSS should not lose margin"
+    # Strictly earlier, not merely "no later": if the lateral check were subsumed by
+    # the longitudinal one it would contribute nothing and the two runs would tie.
+    # SAFETY_CASE.md G3.3 claims the lateral check buys reaction time — assert it.
+    assert full["react_t"] < lon["react_t"], "lateral RSS must react strictly earlier"
+    assert full["min_dist"] > lon["min_dist"], "lateral RSS must gain margin"
     print(f"lateral RSS: OK  (react {full['react_t']:.1f}s vs {lon['react_t']:.1f}s, "
           f"min dist {full['min_dist']:.1f} vs {lon['min_dist']:.1f} m)")
 

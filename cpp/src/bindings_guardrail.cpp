@@ -22,7 +22,8 @@ PYBIND11_MODULE(guardrail_cpp, mod) {
     mod.doc() = "RSS safety guardrail — longitudinal/lateral safety + latch override.";
 
     py::class_<Guardrail>(mod, "Guardrail")
-        .def(py::init<double,double,double,double,double,double,int,bool>(),
+        .def(py::init<double,double,double,double,double,double,int,bool,
+                      double,double,double,double>(),
              py::arg("rho")          = 0.4,
              py::arg("a_accel_max")  = 1.0,
              py::arg("b_min")        = 4.0,
@@ -30,11 +31,19 @@ PYBIND11_MODULE(guardrail_cpp, mod) {
              py::arg("b_emergency")  = 6.0,
              py::arg("ttc_min")      = 2.5,
              py::arg("hold")         = 15,
-             py::arg("use_lateral")  = true)
+             py::arg("use_lateral")  = true,
+             py::arg("mu")           = 0.5,
+             py::arg("a_lat_max")    = 0.5,
+             py::arg("b_lat_min")    = 1.0,
+             py::arg("veh_len")      = 4.5)
         .def_readwrite("rho",          &Guardrail::rho)
         .def_readwrite("ttc_min",     &Guardrail::ttc_min)
         .def_readwrite("b_emergency", &Guardrail::b_emergency)
         .def_readwrite("use_lateral", &Guardrail::use_lateral)
+        .def_readwrite("mu",          &Guardrail::mu)
+        .def_readwrite("a_lat_max",   &Guardrail::a_lat_max)
+        .def_readwrite("b_lat_min",   &Guardrail::b_lat_min)
+        .def_readwrite("veh_len",     &Guardrail::veh_len)
         .def("rss_min_distance",
              &Guardrail::rss_min_distance,
              py::arg("v_ego"), py::arg("v_lead"))

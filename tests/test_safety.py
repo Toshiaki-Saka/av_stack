@@ -94,23 +94,52 @@ def test_guardrail_longitudinal_override():
     assert a < 0.0, "Emergency brake must be negative acceleration"
 
 
-def _cut_in_guardrail():
-    """Guardrail with rho=1.0 so the lateral RSS distance exceeds half a lane width.
+def test_guardrail_lateral_rss_matches_documented_formula():
+    """guardrail_cpp: lateral RSS distance follows docs_en/TECHNICAL.md 9.3.
 
-    With the default rho=0.4 the lateral safe distance peaks at 1.46 m, which is
-    inside LANE/2, so the cut-in branch cannot fire without the longitudinal check
-    firing on the same track. Widening rho isolates the lateral branch.
+    d_lat(v) = mu + lat_travel(0) + lat_travel(v)
+    lat_travel(v) = v*rho + 0.5*a_lat_max*rho^2 + (v + rho*a_lat_max)^2 / (2*b_lat_min)
+
+    The braking term is the part that was once missing; without it the distance is
+    roughly a third of its true value and the cut-in check never fires on its own.
     """
     import guardrail_cpp
-    return guardrail_cpp.Guardrail(rho=1.0)
+    g = guardrail_cpp.Guardrail()
+    rho, mu, a_lat, b_lat = 0.4, 0.5, 0.5, 1.0
+
+    def lat_travel(v):
+        return v * rho + 0.5 * a_lat * rho ** 2 + (v + rho * a_lat) ** 2 / (2 * b_lat)
+
+    for v in (0.0, 0.5, 1.0, 2.0, 3.0):
+        expect = mu + lat_travel(0.0) + lat_travel(v)
+        got = g.rss_lateral_min_distance(v)
+        assert abs(got - expect) < 1e-9, f"v={v}: expected {expect:.4f}, got {got:.4f}"
 
 
-def test_guardrail_cut_in_fires_on_approaching_neighbour():
-    """guardrail_cpp: a neighbour encroaching laterally still triggers CUT_IN."""
-    g = _cut_in_guardrail()
+def test_guardrail_lateral_rss_exceeds_half_lane():
+    """guardrail_cpp: at a realistic merge speed the lateral RSS distance must reach
+    beyond half a lane width, or the check can only fire once the neighbour is already
+    in the ego lane — by which point the longitudinal check has fired anyway and the
+    lateral branch is dead code (SAFETY_CASE.md G3.3)."""
+    import guardrail_cpp
+    LANE = 3.5
+    g = guardrail_cpp.Guardrail()
+    d_lat = g.rss_lateral_min_distance(2.0)
+    assert d_lat > LANE / 2, (
+        f"lateral RSS distance {d_lat:.2f} m must exceed LANE/2 = {LANE / 2} m")
+
+
+def test_guardrail_cut_in_fires_before_lane_encroachment():
+    """guardrail_cpp: a neighbour still in the adjacent lane triggers CUT_IN.
+
+    The neighbour sits 2.5 m to the left — beyond LANE/2, so it is not yet a
+    longitudinal lead and only the lateral branch can catch it. This is the reaction
+    time the safety case claims the lateral RSS check buys (SAFETY_CASE.md G3.3).
+    """
+    import guardrail_cpp
+    g = guardrail_cpp.Guardrail()
     ego = [0.0, 0.0, 10.0, 0.0]
-    # 2.5 m to the left (outside the ego lane, so no longitudinal lead), closing at
-    # vy = -2.0 m/s; lateral RSS distance at that speed is 3.1 m > 2.5 m gap.
+    # Closing laterally at 2.0 m/s: lateral RSS distance is 3.82 m > the 2.5 m gap.
     tracks = [(1, 5.0, 2.5, 8.0, -2.0, 0.0, True)]
     a, delta, status, reason = g.check(ego, [1.0, 0.0], tracks)
     assert status == "OVERRIDE", f"Expected OVERRIDE, got {status}"
@@ -124,7 +153,8 @@ def test_guardrail_no_cut_in_for_departing_neighbour():
     lateral-approach check the RSS distances alone are violated and the guardrail
     latches an emergency brake on a vehicle that is leaving (REQ-SAF-04, SG4).
     """
-    g = _cut_in_guardrail()
+    import guardrail_cpp
+    g = guardrail_cpp.Guardrail()
     ego = [0.0, 0.0, 10.0, 0.0]
     tracks = [(1, 5.0, 2.5, 8.0, +2.0, 0.0, True)]
     a, delta, status, reason = g.check(ego, [1.0, 0.0], tracks)
