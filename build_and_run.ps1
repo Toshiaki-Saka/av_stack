@@ -31,13 +31,18 @@
       "animation"    pure-Python animation (hard brake + cut-in), no C++ build needed
 
 .EXAMPLE
-    .\build_and_run.ps1
-    .\build_and_run.ps1 -SkipBuild
+    .\build_and_run.ps1                          # build + test + the pipeline demo
+    .\build_and_run.ps1 -SkipBuild               # skip the build
+    .\build_and_run.ps1 -SkipBuild -SkipTests    # skip the build and the tests
+
+    # Every -Demo value, explicitly:
+    .\build_and_run.ps1 -SkipBuild -Demo pipeline      # guardrail ON/OFF comparison (the default)
+    .\build_and_run.ps1 -SkipBuild -Demo animation     # pure-Python animation
     .\build_and_run.ps1 -SkipBuild -Demo hard_brake
-    .\build_and_run.ps1 -SkipBuild -Demo acc
-    .\build_and_run.ps1 -SkipBuild -Demo avoidance
     .\build_and_run.ps1 -SkipBuild -Demo lead_brake
     .\build_and_run.ps1 -SkipBuild -Demo mixed
+    .\build_and_run.ps1 -SkipBuild -Demo acc
+    .\build_and_run.ps1 -SkipBuild -Demo avoidance
     .\build_and_run.ps1 -SkipBuild -Demo cut_in
     .\build_and_run.ps1 -SkipBuild -Demo safety_stop
 #>
