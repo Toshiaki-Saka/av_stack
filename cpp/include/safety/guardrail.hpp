@@ -140,9 +140,16 @@ private:
         double v_ego = std::hypot(ego[2], ego[3]);
         for (const auto& t : tracks) {
             if (!t.confirmed) continue;
+            // Ghost tracks (sensor artifacts) often carry a large vy estimate, which
+            // inflates the lateral RSS distance until the gap test passes trivially.
+            if (std::abs(t.vy) > _MAX_VY) continue;
+
             // Lateral: moving into ego lane
             double dy = t.y - ego[1];
             if (std::abs(dy) > ad::world::LANE) continue;
+            // A neighbour drifting away from the ego is not a cut-in; requiring vy to
+            // point toward the ego keeps a departing vehicle from latching the brake.
+            if (dy * t.vy >= -0.05) continue;
             double d_lat_min = rss_lateral_min_distance(t.vy);
             if (std::abs(dy) >= d_lat_min) continue;
 

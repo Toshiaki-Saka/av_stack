@@ -92,3 +92,56 @@ def test_guardrail_longitudinal_override():
     a, delta, status, reason = g.check(ego, [1.0, 0.0], tracks)
     assert status == "OVERRIDE", f"Expected OVERRIDE, got {status} ({reason})"
     assert a < 0.0, "Emergency brake must be negative acceleration"
+
+
+def _cut_in_guardrail():
+    """Guardrail with rho=1.0 so the lateral RSS distance exceeds half a lane width.
+
+    With the default rho=0.4 the lateral safe distance peaks at 1.46 m, which is
+    inside LANE/2, so the cut-in branch cannot fire without the longitudinal check
+    firing on the same track. Widening rho isolates the lateral branch.
+    """
+    import guardrail_cpp
+    return guardrail_cpp.Guardrail(rho=1.0)
+
+
+def test_guardrail_cut_in_fires_on_approaching_neighbour():
+    """guardrail_cpp: a neighbour encroaching laterally still triggers CUT_IN."""
+    g = _cut_in_guardrail()
+    ego = [0.0, 0.0, 10.0, 0.0]
+    # 2.5 m to the left (outside the ego lane, so no longitudinal lead), closing at
+    # vy = -2.0 m/s; lateral RSS distance at that speed is 3.1 m > 2.5 m gap.
+    tracks = [(1, 5.0, 2.5, 8.0, -2.0, 0.0, True)]
+    a, delta, status, reason = g.check(ego, [1.0, 0.0], tracks)
+    assert status == "OVERRIDE", f"Expected OVERRIDE, got {status}"
+    assert reason == "CUT_IN", f"Expected CUT_IN, got {reason}"
+
+
+def test_guardrail_no_cut_in_for_departing_neighbour():
+    """guardrail_cpp: a neighbour drifting *away* from the ego is not a cut-in.
+
+    Identical to the approaching case except for the sign of vy. Without the
+    lateral-approach check the RSS distances alone are violated and the guardrail
+    latches an emergency brake on a vehicle that is leaving (REQ-SAF-04, SG4).
+    """
+    g = _cut_in_guardrail()
+    ego = [0.0, 0.0, 10.0, 0.0]
+    tracks = [(1, 5.0, 2.5, 8.0, +2.0, 0.0, True)]
+    a, delta, status, reason = g.check(ego, [1.0, 0.0], tracks)
+    assert status == "OK", f"Departing neighbour must not override, got {reason}"
+
+
+def test_guardrail_ignores_ghost_track_lateral_speed():
+    """guardrail_cpp: an implausible vy (ghost track) must not trigger CUT_IN.
+
+    The lateral RSS distance grows with vy, so an unfiltered ghost track inflates it
+    until the lateral gap test passes trivially. _MAX_VY (3.0 m/s) rejects these.
+    """
+    import guardrail_cpp
+    g = guardrail_cpp.Guardrail()
+    ego = [0.0, 0.0, 10.0, 0.0]
+    # vy = 5.0 m/s is beyond any real cut-in; at 2.0 m lateral gap the unfiltered
+    # lateral RSS distance would be 2.26 m and would fire.
+    tracks = [(1, 5.0, 2.0, 0.0, 5.0, 0.0, True)]
+    a, delta, status, reason = g.check(ego, [1.0, 0.0], tracks)
+    assert status == "OK", f"Ghost track must not override, got {reason}"
