@@ -501,6 +501,9 @@ if __name__ == "__main__":
             ax[2].set_title("Acceleration command (red = guardrail override)"); ax[2].legend()
             out = os.path.join(os.path.dirname(__file__), "..", "assets", "pipeline_guardrail.png")
             _plt.tight_layout(); _plt.savefig(out, dpi=95)
+            # Close it: _run_animated() switches the backend to TkAgg, and a figure
+            # manager left over from the Agg backend breaks Tk's plt.show().
+            _plt.close(fig)
             print(f"saved {out}")
         except Exception as e:
             print("plot skipped:", e)
