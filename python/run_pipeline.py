@@ -382,6 +382,24 @@ def _run_animated(state,
 
 
 _DEMO_CONFIGS = {
+    "lead_brake": dict(
+        scenario=W.scenario_lead_brake,
+        use_guardrail=True,
+        planner_fault=False,
+        max_steps=120,
+        title_suffix="[lead brake: moderate 4 m/s^2 decel, nominal planner copes]",
+        scenario_desc="nominal planner follows, then overtakes; guardrail stays silent",
+        console_scenario="Scenario : lead brakes moderately (4 m/s^2 at t=3 s) -- planner copes unaided",
+    ),
+    "mixed": dict(
+        scenario=W.scenario_mixed,
+        use_guardrail=True,
+        planner_fault=False,
+        max_steps=130,
+        title_suffix="[mixed traffic: slow lead in ego lane, faster car in the left lane]",
+        scenario_desc="two agents tracked by the IMM filter; ego settles into following the slow lead",
+        console_scenario="Scenario : mixed traffic -- slow lead (7 m/s) ahead, faster car (13 m/s) in the left lane",
+    ),
     "acc": dict(
         scenario=W.scenario_acc_follow,
         use_guardrail=True,
@@ -401,6 +419,18 @@ _DEMO_CONFIGS = {
         scenario_desc="planner detects slow obstacle → CHANGE_LANE to left, then CRUISE",
         console_scenario="Scenario : slow obstacle (3 m/s) in ego lane; planner overtakes to left lane",
     ),
+    "cut_in": dict(
+        scenario=W.scenario_cut_in,
+        use_guardrail=True,
+        # A nominal planner yields to the cut-in on its own and the guardrail never
+        # fires, so the demo would show nothing. The faulty planner makes the
+        # guardrail the only remaining safety layer — same setup as test_lateral_rss.
+        planner_fault=True,
+        max_steps=90,
+        title_suffix="[cut-in: neighbour merges from the left lane, faulty planner]",
+        scenario_desc="faulty planner ignores the merging neighbour; guardrail brakes",
+        console_scenario="Scenario : left-lane neighbour cuts in (t 0.5-3.5 s) + faulty planner -- guardrail brakes",
+    ),
     "safety_stop": dict(
         scenario=W.scenario_safety_stop,
         use_guardrail=True,
@@ -416,7 +446,7 @@ _DEMO_CONFIGS = {
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="av-stack pipeline demo")
     ap.add_argument("--scenario", choices=list(_DEMO_CONFIGS), default=None,
-                    help="run a specific demo scenario (acc / avoidance / safety_stop)")
+                    help="run a specific demo scenario (see _DEMO_CONFIGS for the full list)")
     args = ap.parse_args()
 
     if args.scenario is not None:

@@ -80,9 +80,18 @@
 .\build_and_run.ps1 -Demo acc                # demoを選択（下記参照）
 ```
 
-`-Demo` でシナリオを選択します: `pipeline`（guardrail ON/OFF 比較・既定）、
-`animation`（純Pythonリアルタイムアニメーション）、`acc`（ACC追従）、
-`avoidance`（車線変更回避）、`safety_stop`（RSS guardrail 緊急停車）。
+`-Demo` でシナリオを選択します。C++ 側の全シナリオを起動できます。
+
+| `-Demo` | シナリオ | プランナー | 見どころ |
+|---|---|---|---|
+| `pipeline`（既定） | 急制動 8 m/s² | 故障 | guardrail ON/OFF 比較 — なしでは衝突、ありでは安全停止 |
+| `animation` | 急制動 + 割り込み | — | 純Pythonリアルタイムアニメーション（C++ ビルド不要） |
+| `lead_brake` | 中程度の制動 4 m/s² | 正常 | 追従後に追い越し。guardrail は発火しない |
+| `mixed` | 低速先行車 + 左車線の高速車 | 正常 | IMM が2台を追跡、自車は低速車に追従 |
+| `acc` | 先行車が 8 m/s で巡航 | 正常 | ACC 追従。guardrail は安全網として待機 |
+| `avoidance` | 低速障害物 3 m/s | 正常 | `CHANGE_LANE` で左車線へ追い越し、`CRUISE` に復帰 |
+| `cut_in` | 左隣レーンからの割り込み | 故障 | プランナーが割り込みを無視、guardrail が制動 |
+| `safety_stop` | 急制動 + 左車線封鎖 | 故障 | 逃げ場なし。RSS guardrail が緊急停車 |
 
 **プラットフォーム非依存 — ビルド不要:**
 

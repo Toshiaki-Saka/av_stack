@@ -15,19 +15,29 @@
       "animation"    pure-Python animation demo (hard brake + cut-in)
       "acc"          ACC car-following demo (follow a lead at 8 m/s)
       "avoidance"    lane-change avoidance demo (overtake a slow obstacle on the left)
+      "lead_brake"   moderate lead braking (4 m/s^2); the nominal planner copes unaided
+      "mixed"        mixed traffic (slow lead + faster car in the left lane), IMM tracking
+      "cut_in"       cut-in demo (left-lane neighbour merges in front of a faulty planner)
       "safety_stop"  functional-safety stop demo (lead hard-brakes + left lane blocked -> guardrail stops)
+
+    The C++ scenarios all reach the guardrail through the same pipeline; the demos
+    differ in the scenario and in whether the planner is nominal or faulty.
 
 .EXAMPLE
     .\build_and_run.ps1
     .\build_and_run.ps1 -SkipBuild
     .\build_and_run.ps1 -SkipBuild -Demo acc
     .\build_and_run.ps1 -SkipBuild -Demo avoidance
+    .\build_and_run.ps1 -SkipBuild -Demo lead_brake
+    .\build_and_run.ps1 -SkipBuild -Demo mixed
+    .\build_and_run.ps1 -SkipBuild -Demo cut_in
     .\build_and_run.ps1 -SkipBuild -Demo safety_stop
 #>
 param(
     [switch]$SkipBuild,
     [switch]$SkipTests,
-    [ValidateSet("animation", "pipeline", "acc", "avoidance", "safety_stop")]
+    [ValidateSet("animation", "pipeline", "acc", "avoidance",
+                 "lead_brake", "mixed", "cut_in", "safety_stop")]
     [string]$Demo = "pipeline"
 )
 
@@ -121,6 +131,24 @@ switch ($Demo) {
         Write-Host "Scenario: slow obstacle (3 m/s) in the ego lane, left lane is clear" -ForegroundColor Yellow
         Write-Host "Expected: CHANGE_LANE -> change into the left lane and overtake -> CRUISE" -ForegroundColor Cyan
         python "$Root\python\run_pipeline.py" --scenario avoidance
+    }
+    "lead_brake" {
+        Write-Header "Demo: moderate lead braking"
+        Write-Host "Scenario: lead vehicle brakes at 4 m/s^2 at t = 3 s (nominal planner)" -ForegroundColor Yellow
+        Write-Host "Expected: FOLLOW/SLOW then CHANGE_LANE to overtake - guardrail never fires" -ForegroundColor Cyan
+        python "$Root\python\run_pipeline.py" --scenario lead_brake
+    }
+    "mixed" {
+        Write-Header "Demo: mixed traffic"
+        Write-Host "Scenario: slow lead (7 m/s) in the ego lane, faster car (13 m/s) in the left lane" -ForegroundColor Yellow
+        Write-Host "Expected: IMM tracks both agents; ego settles into FOLLOW/SLOW - guardrail never fires" -ForegroundColor Cyan
+        python "$Root\python\run_pipeline.py" --scenario mixed
+    }
+    "cut_in" {
+        Write-Header "Demo: cut-in"
+        Write-Host "Scenario: a left-lane neighbour merges in front of the ego (t 0.5-3.5 s)" -ForegroundColor Yellow
+        Write-Host "Expected: the faulty planner ignores the merge -> RSS guardrail brakes" -ForegroundColor Cyan
+        python "$Root\python\run_pipeline.py" --scenario cut_in
     }
     "safety_stop" {
         Write-Header "Demo: functional-safety stop"
