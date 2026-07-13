@@ -269,9 +269,21 @@ $TTC = gap / (v_{ego} - v_{lead})$ below a threshold (2.5 s).
 
 ### 3. Lateral RSS
 
-Detects a dangerous cut-in: a neighbour whose lateral gap is below the lateral
-RSS safe distance *and* whose longitudinal position is within the RSS band.
-Per RSS, both conditions must hold simultaneously.
+Detects a dangerous cut-in. Per RSS a situation is dangerous only when the lateral
+*and* longitudinal safe distances are violated together, so both must hold:
+
+$$d_{lat}(v_{lat}) = \mu + \ell(0) + \ell(|v_{lat}|), \qquad \ell(v) = v\rho + \tfrac{1}{2}a_{lat}\rho^2 + \frac{(v + \rho a_{lat})^2}{2b_{lat}}$$
+
+fires when $|\Delta y| < d_{lat}$ *and* $-L_{veh} \le \Delta x \le d_{RSS} + L_{veh}$.
+The lateral distance reaches beyond half a lane width ($3.82$ m at $v_{lat} = 2$ m/s,
+against $\text{LANE}/2 = 1.75$ m) — that is what lets the check fire while the
+neighbour is still in the adjacent lane, rather than after it has become an in-lane
+lead that the longitudinal check would have caught anyway.
+
+Two further conditions gate it — the track's lateral speed must be credible
+($|v_y| \le 3$ m/s, rejecting sensor ghosts) and it must actually be closing on the
+ego ($\Delta y \cdot v_y < 0$, so a departing neighbour is not braked for). These carry
+no safety credit; they exist to protect availability.
 
 When any check fires, the guardrail **latches** for `hold` steps and substitutes
 emergency braking ($-6$ m/s²) for the planner's command.
@@ -394,7 +406,7 @@ pytest tests/ -v
 | Tracker position error (steady state) | < 0.6 m (mean), < 0.4 m/s (velocity) |
 | Guardrail — hard brake scenario | 0 rear-ends (vs. collision without guardrail) |
 | Guardrail — cut-in scenario | lateral RSS reacts 0.5 s earlier than the longitudinal check alone (1.2 s vs 1.7 s), +1.9 m clearance |
-| Python test suite | 28 passed (`pytest tests/`, 5 files, exercising the C++ modules) |
+| Python test suite | 33 passed (`pytest tests/`, 5 files, exercising the C++ modules) |
 
 ---
 
