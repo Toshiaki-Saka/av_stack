@@ -715,12 +715,21 @@ where $\mu = 0.5$ m is a clearance buffer, $a_{lat\_max} = 0.5$ m/s², $b_{lat\_
 
 **Cut-in criterion** (all must hold simultaneously):
 
+0. Lateral speed is credible: $|vy_{agent}| \le v_{y,max} = 3$ m/s. $d_{lat}$ grows with
+   $vy$, so a ghost track carrying a large $vy$ estimate would inflate it until the gap
+   test below passes trivially. No real vehicle merges faster than this.
 1. Agent is approaching laterally: $(y_{agent} - y_{ego}) \cdot vy_{agent} < 0$.
 2. Lateral gap $|y_{agent} - y_{ego}| < d_{lat}(|vy_{agent}|)$.
 3. Longitudinal gap within the RSS band: $-L_{veh} \le (x_{agent} - x_{ego}) \le d_{RSS} + L_{veh}$.
 
-When both 2 and 3 hold, the correct RSS response — no safe lateral evasion — is
-**longitudinal braking**.
+Conditions 2 and 3 are the RSS pair: when both hold, the correct RSS response — there
+being no safe lateral evasion — is **longitudinal braking**. Conditions 0 and 1 are
+false-positive controls; they carry no safety credit and exist to protect availability.
+
+Note that $d_{lat}$ must exceed $\text{LANE}/2$ at realistic merge speeds
+($d_{lat} = 3.82$ m at $vy = 2$ m/s, against $\text{LANE}/2 = 1.75$ m). Otherwise the
+check can only fire once the agent is already an in-lane lead, at which point the
+longitudinal check has fired anyway and the lateral branch contributes nothing.
 
 ### 9.4 Latch mechanism
 

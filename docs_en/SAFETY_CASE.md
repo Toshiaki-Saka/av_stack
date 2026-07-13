@@ -61,7 +61,7 @@ fallback (emergency braking at −6 m/s², steering held for stability, latch fo
 |---|---|---|---|
 | G3.1 | Sudden lead braking | Sn2 RSS longitudinal safe distance | guardrail fires before contact; min gap +3.1 m |
 | G3.2 | Very hard lead braking (8 m/s²) | Sn2 + Sn3 TTC < 2.5 s | both checks fire; planner alone would rear-end |
-| G3.3 | Lateral cut-in | Sn4 RSS lateral + longitudinal dual condition | fires ~1.5 s before lateral overlap |
+| G3.3 | Lateral cut-in | Sn4 RSS lateral + longitudinal band | fires 0.5 s earlier than the longitudinal check alone, and 1.9 m of extra clearance |
 | G3.4 | Degraded planner (fault=True) | Sn2 + Sn3 + Sn4 all active | guardrail overrides a tailgating faulted planner |
 
 **G3.1 / G3.2 detail (longitudinal).**
@@ -80,12 +80,49 @@ Reproduced by `tests/test_modules.py::test_guardrail_pipeline`.
 
 **G3.3 detail (lateral cut-in).**
 
-`scenario_cut_in`: neighbour in the left lane moves into the ego lane starting at
-$t = 1$ s. The lateral RSS check monitors the combined condition (lateral gap
-below $\mu + \sum \text{lateral travel}$ **and** longitudinal gap within the RSS band). It
-fires approximately 1.5 s before the neighbour would reach lateral overlap with
-the ego footprint, giving the guardrail time to brake before the lateral hazard
-becomes unavoidable.
+`scenario_cut_in`: a neighbour in the left lane moves into the ego lane between
+$t = 0.5$ s and $t = 3.5$ s. The cut-in check fires only when **all** of the
+following hold simultaneously (`safety/guardrail.hpp::_cut_in_threat`):
+
+1. The track is confirmed and its lateral speed is credible ($|v_y| \le 3$ m/s).
+2. It is approaching laterally — $\Delta y \cdot v_y < 0$.
+3. The lateral gap is below the RSS lateral safe distance, $|\Delta y| < d_{lat}(v_y)$.
+4. The longitudinal gap is inside the RSS band, $-L_{veh} \le \Delta x \le d_{RSS} + L_{veh}$.
+
+Conditions 3 and 4 are the RSS pair: per Shalev-Shwartz, a situation is dangerous
+only when the lateral *and* longitudinal safe distances are violated together, and
+the correct response — there being no safe lateral evasion — is longitudinal braking.
+Conditions 1 and 2 are false-positive controls and carry no safety credit; they exist
+to protect availability (SG4, REQ-SAF-04) by refusing to brake for a sensor ghost or
+for a neighbour that is departing rather than merging.
+
+The load-bearing property is that $d_{lat}$ reaches **beyond half a lane width**
+($d_{lat} = 3.82$ m at $v_y = 2$ m/s, versus $\text{LANE}/2 = 1.75$ m). This is what
+lets the check fire while the neighbour is *still in the adjacent lane* — before it
+becomes an in-lane lead, which is the only reason the lateral branch buys anything
+over the longitudinal one.
+
+Measured on `scenario_cut_in` with the planner fault injected, so that the guardrail
+is the sole remaining safety layer:
+
+| | reaction | overrides | min distance |
+|---|---|---|---|
+| longitudinal + TTC only (`use_lateral=False`) | 1.7 s | 19 | 11.16 m |
+| with lateral RSS (`use_lateral=True`) | **1.2 s** | 20 | **13.08 m** |
+
+The lateral check reacts 0.5 s earlier and holds 1.9 m more clearance. Reproduced by
+`tests/test_modules.py::test_lateral_rss`, which asserts the improvement is *strict* —
+a lateral check that merely duplicated the longitudinal one would tie, and the test
+would fail.
+
+**Availability cost (honest).** With the lateral check active the guardrail also
+intervenes in `scenario_cut_in` under a *nominal* planner (18 override steps, where
+previously there were none), improving min gap from 8.43 m to 9.54 m. This is not a
+false positive: at that moment the ego is at 12 m/s behind a 9 m/s merging neighbour
+with an 18 m gap, against $d_{RSS} = 19.0$ m — the RSS distance is genuinely violated.
+It is the expected consequence of a worst-case monitor sitting above a planner that
+reasons with comfortable-deceleration assumptions. The guardrail is doing its job; the
+cost is that the ego brakes in a situation the planner would have survived unaided.
 
 **G3.4 detail (planner fault injection).**
 
@@ -100,7 +137,7 @@ planner's commands throughout the hazard window.
 
 ## G4 — residual risk is identified and bounded
 
-**Sn5 (evidence).** Two residual categories are identified:
+**Sn5 (evidence).** Three residual categories are identified:
 
 ### R1 — RSS parameter calibration
 
@@ -127,6 +164,26 @@ It does **not** currently monitor:
 
 These are out of scope for the synthetic two-lane ODD but would require additional
 sub-goals in a real deployment.
+
+### R3 — the guardrail exists twice
+
+The monitor is implemented in both `cpp/include/safety/guardrail.hpp` (the production
+path, exposed as `guardrail_cpp`) and `python/guardrail.py` (a reference
+implementation). Nothing structurally forces the two to agree, and they have already
+drifted: the C++ lateral RSS distance was missing the lateral braking term for some
+time, which silently reduced $d_{lat}$ to roughly a third of its specified value and
+left the entire cut-in branch subsumed by the longitudinal check. The closed-loop
+scenarios did not catch it, because the longitudinal check fired anyway and the
+outcome still looked safe.
+
+This is the most instructive residual in this document. A safety monitor that is
+*duplicated* rather than *single-sourced* can fail silently in the copy that ships,
+while the copy that is read during review remains correct. Current mitigation is
+`tests/test_safety.py::test_guardrail_lateral_rss_matches_documented_formula`, which
+pins the production formula to the closed form in TECHNICAL.md §9.3, plus
+`test_lateral_rss`, which asserts the lateral branch produces a *strict* improvement
+over the longitudinal one and therefore cannot quietly become dead code again. A real
+deployment should eliminate the duplication rather than test around it.
 
 **A2 (assumption / residual).** Coverage is argued only over the scripted scenario
 grid and the ODD above. Scenarios outside it — complex multi-agent interactions,

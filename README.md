@@ -305,8 +305,10 @@ in time. Running with the guardrail disabled vs. enabled:
 | planner only (no guardrail) | **yes** | **−0.8 m** | collision |
 | with guardrail | **no** | **+3.1 m** | safe stop |
 
-For the cut-in scenario, the lateral RSS check fires ~1.5 s before the neighbour
-reaches the ego lane, giving time to brake before lateral overlap.
+For the cut-in scenario, the lateral RSS check fires while the neighbour is still in
+the adjacent lane — the lateral safe distance reaches 3.82 m at a 2 m/s merge, well
+beyond half a lane width. Against the longitudinal check alone it reacts 0.5 s earlier
+(1.2 s vs 1.7 s) and holds 1.9 m more clearance.
 
 The guardrail is the simplest, most auditable component in the stack. That is
 deliberate: for functional safety, a safety monitor must be *independently
@@ -390,7 +392,7 @@ pytest tests/ -v
 | MPC lateral recovery | $y = 0.000$ m (target 0), $\max\lvert\delta\rvert = 0.600$ (limit 0.6) |
 | Tracker position error (steady state) | < 0.6 m (mean), < 0.4 m/s (velocity) |
 | Guardrail — hard brake scenario | 0 rear-ends (vs. collision without guardrail) |
-| Guardrail — cut-in scenario | lateral RSS fires ~1.5 s before overlap |
+| Guardrail — cut-in scenario | lateral RSS reacts 0.5 s earlier than the longitudinal check alone (1.2 s vs 1.7 s), +1.9 m clearance |
 | Python test suite | 28 passed (`pytest tests/`, 5 files, exercising the C++ modules) |
 
 ---
