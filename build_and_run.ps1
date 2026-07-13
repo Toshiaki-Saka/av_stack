@@ -10,22 +10,30 @@
     Skip the C++ / Python test suites
 
 .PARAMETER Demo
-    Select the demo to launch:
-      "pipeline"     full closed-loop pipeline comparison (guardrail ON/OFF) — default
-      "animation"    pure-Python animation demo (hard brake + cut-in)
-      "acc"          ACC car-following demo (follow a lead at 8 m/s)
-      "avoidance"    lane-change avoidance demo (overtake a slow obstacle on the left)
-      "lead_brake"   moderate lead braking (4 m/s^2); the nominal planner copes unaided
-      "mixed"        mixed traffic (slow lead + faster car in the left lane), IMM tracking
-      "cut_in"       cut-in demo (left-lane neighbour merges in front of a faulty planner)
-      "safety_stop"  functional-safety stop demo (lead hard-brakes + left lane blocked -> guardrail stops)
+    "pipeline" is not a scenario — it is the guardrail ON/OFF comparison, which runs
+    scenario_hard_brake four ways (nominal/faulty planner x guardrail on/off), prints
+    the numbers, saves assets/pipeline_guardrail.png, and then animates the faulty +
+    guardrail run. Every other value animates one scenario once.
 
-    The C++ scenarios all reach the guardrail through the same pipeline; the demos
-    differ in the scenario and in whether the planner is nominal or faulty.
+    Nominal planner (the planner copes; the guardrail stays silent):
+      "hard_brake"   lead brakes hard (8 m/s^2) — planner still keeps headway alone
+      "lead_brake"   moderate lead braking (4 m/s^2)
+      "mixed"        mixed traffic (slow lead + faster car in the left lane), IMM tracking
+      "acc"          ACC car-following (follow a lead at 8 m/s)
+      "avoidance"    lane-change avoidance (overtake a slow obstacle on the left)
+
+    Faulty planner (the guardrail is the only remaining safety layer):
+      "cut_in"       left-lane neighbour merges in; lateral RSS fires
+      "safety_stop"  lead hard-brakes + left lane blocked -> guardrail brakes to a stop
+
+    Other:
+      "pipeline"     guardrail ON/OFF comparison on hard_brake — default
+      "animation"    pure-Python animation (hard brake + cut-in), no C++ build needed
 
 .EXAMPLE
     .\build_and_run.ps1
     .\build_and_run.ps1 -SkipBuild
+    .\build_and_run.ps1 -SkipBuild -Demo hard_brake
     .\build_and_run.ps1 -SkipBuild -Demo acc
     .\build_and_run.ps1 -SkipBuild -Demo avoidance
     .\build_and_run.ps1 -SkipBuild -Demo lead_brake
@@ -36,8 +44,8 @@
 param(
     [switch]$SkipBuild,
     [switch]$SkipTests,
-    [ValidateSet("animation", "pipeline", "acc", "avoidance",
-                 "lead_brake", "mixed", "cut_in", "safety_stop")]
+    [ValidateSet("animation", "pipeline", "hard_brake", "lead_brake", "mixed",
+                 "acc", "avoidance", "cut_in", "safety_stop")]
     [string]$Demo = "pipeline"
 )
 
@@ -131,6 +139,13 @@ switch ($Demo) {
         Write-Host "Scenario: slow obstacle (3 m/s) in the ego lane, left lane is clear" -ForegroundColor Yellow
         Write-Host "Expected: CHANGE_LANE -> change into the left lane and overtake -> CRUISE" -ForegroundColor Cyan
         python "$Root\python\run_pipeline.py" --scenario avoidance
+    }
+    "hard_brake" {
+        Write-Header "Demo: hard lead braking"
+        Write-Host "Scenario: lead vehicle brakes at 8 m/s^2 at t = 2 s (nominal planner)" -ForegroundColor Yellow
+        Write-Host "Expected: FOLLOW/SLOW then CHANGE_LANE - planner copes, guardrail never fires" -ForegroundColor Cyan
+        Write-Host "          (for the faulty-planner version of this scenario, use -Demo pipeline)" -ForegroundColor DarkGray
+        python "$Root\python\run_pipeline.py" --scenario hard_brake
     }
     "lead_brake" {
         Write-Header "Demo: moderate lead braking"

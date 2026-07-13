@@ -55,13 +55,14 @@ suites, then launches a demo — end to end:
 
 | `-Demo` | scenario | planner | what you see |
 |---|---|---|---|
-| `pipeline` (default) | hard brake, 8 m/s² | faulty | guardrail ON/OFF comparison — collision without it, safe stop with it |
+| `pipeline` (default) | hard brake, 8 m/s² | both | *not a scenario* — runs `hard_brake` four ways (nominal/faulty × guardrail on/off), prints the comparison, then animates the faulty + guardrail run |
 | `animation` | hard brake + cut-in | — | pure-Python real-time animation, no C++ build needed |
+| `hard_brake` | hard brake, 8 m/s² | nominal | even at the maximum deceleration the planner keeps headway alone; guardrail silent |
 | `lead_brake` | moderate brake, 4 m/s² | nominal | planner follows then overtakes; guardrail never fires |
 | `mixed` | slow lead + faster car left | nominal | IMM tracks both agents; ego settles into following |
 | `acc` | lead cruising at 8 m/s | nominal | ACC car-following, guardrail as a silent safety net |
 | `avoidance` | slow obstacle at 3 m/s | nominal | `CHANGE_LANE` to the left, overtake, back to `CRUISE` |
-| `cut_in` | neighbour merges from the left | faulty | planner ignores the merge; guardrail brakes |
+| `cut_in` | neighbour merges from the left | faulty | planner ignores the merge; lateral RSS fires before the neighbour reaches the lane |
 | `safety_stop` | hard brake + left lane blocked | faulty | no escape route; RSS guardrail brakes to a stop |
 
 **Any platform — no build required:**

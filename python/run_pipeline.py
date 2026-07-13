@@ -382,6 +382,18 @@ def _run_animated(state,
 
 
 _DEMO_CONFIGS = {
+    "hard_brake": dict(
+        scenario=W.scenario_hard_brake,
+        use_guardrail=True,
+        # Nominal planner. The faulty-planner run of this same scenario — the one where
+        # the guardrail has to save it — is the `pipeline` demo, which additionally
+        # compares guardrail ON/OFF.
+        planner_fault=False,
+        max_steps=90,
+        title_suffix="[hard brake: 8 m/s^2, nominal planner copes unaided]",
+        scenario_desc="even at the maximum scripted deceleration the planner keeps headway alone",
+        console_scenario="Scenario : lead brakes hard (8 m/s^2 at t=2 s) -- nominal planner copes unaided",
+    ),
     "lead_brake": dict(
         scenario=W.scenario_lead_brake,
         use_guardrail=True,
