@@ -3,7 +3,7 @@
 <!-- On publish, replace OWNER/REPO below and uncomment the CI badge line. -->
 <!-- [![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/ci.yml) -->
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+![License](https://img.shields.io/badge/license-Apache_2.0-blue)
 
 A modular autonomous-vehicle stack — the classical decoupled-pipeline design used
 in production AV systems: sensors → perception → world model → planning → control,
@@ -137,7 +137,7 @@ docs_en/                            # documentation, English
   hara.md                           #   hazard analysis and risk assessment
   requirements_traceability.md      #   safety goal -> requirement -> component -> test
 docs_ja/                            # the same five documents, Japanese
-LICENSE                             # MIT
+LICENSE                             # Apache-2.0
 requirements.txt / build.sh         # dependencies + one-command build & self-check
 assets/                             # generated figures
 ```
