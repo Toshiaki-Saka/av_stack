@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/<OWNER>/av-stack"
+Repository = "https://github.com/Toshiaki-Saka/av_stack"
 
 [tool.scikit-build]
 cmake.build-type = "Release"
