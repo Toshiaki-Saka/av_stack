@@ -1,7 +1,6 @@
 # av-stack
 
-<!-- On publish, replace OWNER/REPO below and uncomment the CI badge line. -->
-<!-- [![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/ci.yml) -->
+[![CI](https://github.com/Toshiaki-Saka/av_stack/actions/workflows/ci.yml/badge.svg)](https://github.com/Toshiaki-Saka/av_stack/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-Apache_2.0-blue)
 
