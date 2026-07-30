@@ -157,7 +157,7 @@ $$\begin{aligned}
 \end{aligned}$$
 
 積分は (オイラー法ではなく) **RK4** で行う。これは $dt = 0.1$ s における MPC の予測精度に
-とって決定的である。RK4 ステップのヤコビアン $A = \partial f/\partial s$、$B = \partial f/\partial u$ は
+とって決定的である。RK4 ステップのヤコビアン $A = \partial f/\partial s$、 $B = \partial f/\partial u$ は
 中心差分で計算しており、プラントが実際に用いる非線形ステップとの整合性が証明可能な形で
 保たれる。検証済み: 線形化残差 $O(\varepsilon^2) = 2.3\times10^{-6}$。
 
@@ -190,7 +190,7 @@ $$\dot{e}_y = v\,e_\psi, \quad \dot{e}_\psi = (v/L)\,\delta - v\kappa$$
 $$\min\ E^\top \bar{Q} E + \Delta U^\top \bar{R} \Delta U \quad \text{s.t.}\quad u_{min} \le u_{ref} + \Delta U \le u_{max}$$
 
 これを **FISTA** によりゼロから解く (200 反復、ステップ幅 = べき乗反復による 1/L_f)。
-アクチュエータ制限 $a \in [-6, 3]$ m/s²、$\delta \in [-0.6, 0.6]$ rad を明示的に扱う。
+アクチュエータ制限 $a \in [-6, 3]$ m/s²、 $\delta \in [-0.6, 0.6]$ rad を明示的に扱う。
 検証済み: 目標速度に正確に到達し、制限は 1 % 以内で遵守される。
 
 ---
@@ -202,7 +202,7 @@ $$\min\ E^\top \bar{Q} E + \Delta U^\top \bar{R} \Delta U \quad \text{s.t.}\quad
 | センサ | ノイズモデル | 固有の出力 |
 |---|---|---|
 | **LiDAR** | 等方性 $\sigma = 0.15$ m | 位置のみ |
-| **Radar** | 異方性: $\sigma_r = 0.4$ m、$\sigma_{lat} = 1.2$ m (回転済み) | ドップラーによる視線方向速度 |
+| **Radar** | 異方性: $\sigma_r = 0.4$ m、 $\sigma_{lat} = 1.2$ m (回転済み) | ドップラーによる視線方向速度 |
 | **Camera** | $\sigma_{bearing} = 0.6$°、距離の相対誤差 10 % (回転済み) | 物体クラスラベル |
 
 フュージョン (**`perception/fusion.hpp`**) は、センサ横断の検出をマハラノビス距離ゲーティング
@@ -396,8 +396,8 @@ pytest tests/ -v
 |---|---|
 | バイシクル RK4 の線形化残差 | $O(\varepsilon^2) = 2.3\times10^{-6}$ (非線形ステップと整合) |
 | 8 s 後の LQR 横偏差残差 | $8.6\times10^{-14}$ m (実質ゼロ) |
-| MPC の速度追従 | $v = 12.00$ m/s (目標 12)、$\max\lvert a\rvert = 3.00$ (制限 3.0) |
-| MPC の横方向復帰 | $y = 0.000$ m (目標 0)、$\max\lvert\delta\rvert = 0.600$ (制限 0.6) |
+| MPC の速度追従 | $v = 12.00$ m/s (目標 12)、 $\max\lvert a\rvert = 3.00$ (制限 3.0) |
+| MPC の横方向復帰 | $y = 0.000$ m (目標 0)、 $\max\lvert\delta\rvert = 0.600$ (制限 0.6) |
 | トラッカの位置誤差 (定常状態) | < 0.6 m (平均)、< 0.4 m/s (速度) |
 | ガードレール — 急ブレーキシナリオ | 追突 0 件 (ガードレールなしでは衝突) |
 | ガードレール — カットインシナリオ | 横方向 RSS は縦方向チェック単独より 0.5 s 早く反応し (1.2 s 対 1.7 s)、クリアランス +1.9 m |

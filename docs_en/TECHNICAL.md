@@ -157,7 +157,7 @@ differences.
 All numerical work uses a minimal header-only dense matrix library (`linalg.hpp`)
 with no external dependencies (no Eigen, BLAS, or LAPACK). The design trade-off:
 portability and zero setup cost in exchange for $O(n^3)$ dense algorithms, acceptable
-because all matrices are at most ~$30 \times 30$ ($N \cdot m = 30$ for the condensed MPC QP with
+because all matrices are at most ~$`30 \times 30`$ ($N \cdot m = 30$ for the condensed MPC QP with
 $N = 15$, $m = 2$).
 
 **`solve(A, b)` — Gauss–Jordan with partial pivoting.** For each column $c$:
@@ -286,7 +286,9 @@ $$E = S_x e_0 + S_u \Delta U + \text{offset}$$
 The **condensed sensitivity matrix** $S_u \in \mathbb{R}^{Nn \times Nm}$ has block-lower-triangular
 structure:
 
-$$S_u[(k)n+i,\, (j)m+c] = \big[ A_{k-1} \cdots A_{j+1} B_j \big](i,c) \quad \text{for } j \le k-1$$
+```math
+S_u[(k)n+i,\, (j)m+c] = \big[ A_{k-1} \cdots A_{j+1} B_j \big](i,c) \quad \text{for } j \le k-1
+```
 
 and the offset $\text{offset}[k \cdot n : (k+1) \cdot n]$ propagates both $e_0$ and all defects
 $d_0, \dots, d_{k-1}$ through the product of $A$ matrices.
@@ -556,7 +558,7 @@ P_{IMM} &= \sum_j \mu_j \big[ P_j + (\hat{x}_j - \hat{x}_{IMM})(\hat{x}_j - \hat
 
 The **manoeuvre probability $\mu_1$** is itself a useful output: it quantifies how
 aggressively the agent is manoeuvring and can gate downstream cost functions
-(e.g. the planner can penalise proximity to high-$\mu_1$ agents more heavily).
+(e.g. the planner can penalise proximity to high-$`\mu_1`$ agents more heavily).
 
 ### 7.3 Multi-object tracking (MOT)
 

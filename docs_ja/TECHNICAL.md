@@ -110,7 +110,7 @@ s_{k+1} &= s_k + \tfrac{dt}{6}(k_1 + 2k_2 + 2k_3 + k_4)
 \end{aligned}$$
 
 **なぜ Euler 法ではなく RK4 か。** Euler 法の局所打ち切り誤差は $O(dt^2)$ であり、
-$dt = 0.1$ s、$v = 13$ m/s ではヨーレート項 $v/L \cdot \tan \delta$ が毎秒およそ
+$dt = 0.1$ s、 $v = 13$ m/s ではヨーレート項 $v/L \cdot \tan \delta$ が毎秒およそ
 0.5 m/s のヨーレート誤差を蓄積してしまう。RK4 は局所的に $O(dt^5)$ であり、これを
 サブミリメートル領域まで低減する。MPC の予測ホライズンが 15 ステップ (1.5 s) にわたるため、
 予測モデルが不正確だと最適入力に系統的なバイアスが乗るので、この点は重要である。
@@ -148,9 +148,9 @@ $$\lVert \Phi(s_0 + \delta s, u_0) - (\Phi(s_0, u_0) + A_k \delta s) \rVert / \l
 ## 3. 線形代数バックエンド
 
 すべての数値計算は、外部依存を持たない最小限のヘッダオンリー密行列ライブラリ (`linalg.hpp`) を
-用いる (Eigen、BLAS、LAPACK のいずれも使用しない)。設計上のトレードオフは、$O(n^3)$ の密行列
+用いる (Eigen、BLAS、LAPACK のいずれも使用しない)。設計上のトレードオフは、 $O(n^3)$ の密行列
 アルゴリズムと引き換えに、移植性とセットアップコストゼロを得ることである。これが許容できるのは、
-すべての行列が高々 ~$30 \times 30$ 程度 ($N = 15$、$m = 2$ の condensed MPC QP で
+すべての行列が高々 ~$`30 \times 30`$ 程度 ($N = 15$、 $m = 2$ の condensed MPC QP で
 $N \cdot m = 30$) だからである。
 
 **`solve(A, b)` — 部分ピボット選択付き Gauss–Jordan 法。** 各列 $c$ について:
@@ -161,7 +161,7 @@ $N \cdot m = 30$) だからである。
 4. 他のすべての行から列 $c$ を消去する。
 
 ピボットが $10^{-12}$ を下回る場合は、微小な正則化項 $A(c,c) \mathrel{+}= 10^{-9}$ を加えて
-特異に近いケースを穏当に処理する (これは DARE の反復ごく初期、$P$ がまだ $Q$ に近い段階で発生する)。
+特異に近いケースを穏当に処理する (これは DARE の反復ごく初期、 $P$ がまだ $Q$ に近い段階で発生する)。
 
 **`inv(A)` = `solve(A, I)`。** トラッカのイノベーション共分散の逆行列計算 ($2\times2$ 行列) に
 のみ使用するため、コストは無視できる。
@@ -256,7 +256,7 @@ $d_k = \Phi(s_{ref,k}, u_{ref,k}) - s_{ref,k+1}$ は非線形参照軌道から�
 #### 4.3.2 ステージごとの線形化
 
 ステージ $k$ において、RK4 ステップを $(s_{ref,k}, u_{ref,k})$ のまわりで中心差分 (2.3 節) により
-線形化し、$(A_k, B_k)$ を得る。これにより**線形時変 (LTV)** 誤差ダイナミクスが得られる。
+線形化し、 $(A_k, B_k)$ を得る。これにより**線形時変 (LTV)** 誤差ダイナミクスが得られる。
 
 $$e_{k+1} = A_k e_k + B_k \Delta u_k + d_k$$
 
@@ -273,9 +273,11 @@ $$E = S_x e_0 + S_u \Delta U + \text{offset}$$
 
 **凝縮感度行列** $S_u \in \mathbb{R}^{Nn \times Nm}$ は下三角ブロック構造をもつ。
 
-$$S_u[(k)n+i,\, (j)m+c] = \big[ A_{k-1} \cdots A_{j+1} B_j \big](i,c) \quad \text{for } j \le k-1$$
+```math
+S_u[(k)n+i,\, (j)m+c] = \big[ A_{k-1} \cdots A_{j+1} B_j \big](i,c) \quad \text{for } j \le k-1
+```
 
-また offset $\text{offset}[k \cdot n : (k+1) \cdot n]$ は、$e_0$ とすべての defect
+また offset $\text{offset}[k \cdot n : (k+1) \cdot n]$ は、 $e_0$ とすべての defect
 $d_0, \dots, d_{k-1}$ を $A$ 行列の積を通して伝播させる。
 
 **凝縮 QP** (E を消去):
@@ -289,14 +291,14 @@ $$\begin{aligned}
 & hi[k \cdot m + j] = u_{max}[j] - u_{ref,k}[j]
 \end{aligned}$$
 
-$\bar{R}_{blk}$ の対角が厳密に正であるため、$H$ は常に正定である。
+$\bar{R}_{blk}$ の対角が厳密に正であるため、 $H$ は常に正定である。
 
 #### 4.3.4 ソルバ: ボックス射影付き FISTA
 
 **なぜ FISTA か。** 凝縮 QP の制約集合はボックスであり、その射影 $\Pi_{[lo,hi]}$ は成分ごとの
 クランプ、すなわち閉形式の $O(Nm)$ 演算である。強凸な目的関数と閉形式射影の組み合わせに対し、
 FISTA (Fast Iterative Shrinkage-Thresholding Algorithm; Beck & Teboulle, 2009) は目的関数
-ギャップについて $O(1/k^2)$ の収束を達成する (素朴な射影勾配法は $O(1/k)$)。内点法はより速い
+ギャップについて $O(1/k^2)$ の収束を達成する (素朴な射影勾配法は $`O(1/k)`$)。内点法はより速い
 漸近収束を得られるが、LP/QP ソルバへの依存を要し、ここでの問題規模 ($Nm = 30$) には過剰である。
 
 **アルゴリズム** (モーメンタムのリスタートは未実装。素の FISTA で十分):
@@ -319,7 +321,7 @@ v_0 &= (1/\sqrt{Nm})\, \mathbf{1}_{Nm} \\
 w_{k+1} &= H v_k / \lVert H v_k \rVert, \quad \lambda \approx \lVert H v_k \rVert
 \end{aligned}$$
 
-べき乗反復は $(\lambda_1/\lambda_2)^k$ の速度で収束する。$H$ が良条件 ($\bar{R}$ が正則化として
+べき乗反復は $(\lambda_1/\lambda_2)^k$ の速度で収束する。 $H$ が良条件 ($\bar{R}$ が正則化として
 働くため通常はそうなる) の場合、60 反復は保守的な設定である。べき乗法の推定値に $10^{-9}$ を
 加えることで、ステップサイズが有限であることを保証している。
 
@@ -348,7 +350,7 @@ z &= [x, y]^\top + n, \quad n \sim \mathcal{N}(0, \sigma_L^2 I_2), \quad \sigma_
 R_L &= \sigma_L^2 I_2
 \end{aligned}$$
 
-パラメータ: $r_{max} = 80$ m、$\theta_{fov} = 120°$、$p_{miss} = 0.05$。
+パラメータ: $r_{max} = 80$ m、 $\theta_{fov} = 120°$、 $p_{miss} = 0.05$。
 
 ### 5.2 Radar
 
@@ -361,10 +363,10 @@ $$\begin{aligned}
 R_{Radar} &= \operatorname{Rot}(\alpha) \cdot \operatorname{diag}(\sigma_r^2, \sigma_{lat}^2) \cdot \operatorname{Rot}(\alpha)^\top
 \end{aligned}$$
 
-ここで $\sigma_r = 0.4$ m (距離方向)、$\sigma_{lat} = 1.2$ m (横方向) である。さらに Radar は
+ここで $\sigma_r = 0.4$ m (距離方向)、 $\sigma_{lat} = 1.2$ m (横方向) である。さらに Radar は
 **ドップラー視線速度** $v_r = (v_x \cos \alpha + v_y \sin \alpha) + n_v$ を計測する。ここで
-$n_v \sim \mathcal{N}(0, \sigma_{vr}^2)$、$\sigma_{vr} = 0.1$ m/s である。パラメータ:
-$r_{max} = 120$ m、$\theta_{fov} = 90°$、$p_{miss} = 0.05$。
+$n_v \sim \mathcal{N}(0, \sigma_{vr}^2)$、 $\sigma_{vr} = 0.1$ m/s である。パラメータ:
+$r_{max} = 120$ m、 $\theta_{fov} = 90°$、 $p_{miss} = 0.05$。
 
 ### 5.3 Camera
 
@@ -379,7 +381,7 @@ $$\begin{aligned}
 R_{Camera} &= \operatorname{Rot}(\alpha) \cdot \operatorname{diag}((0.10 r)^2, (r \sigma_b)^2) \cdot \operatorname{Rot}(\alpha)^\top
 \end{aligned}$$
 
-パラメータ: $r_{max} = 70$ m、$\theta_{fov} = 70°$、$p_{miss} = 0.04$。Camera は物体のクラス
+パラメータ: $r_{max} = 70$ m、 $\theta_{fov} = 70°$、 $p_{miss} = 0.04$。Camera は物体のクラス
 ラベル $kind \in \{car, truck, \dots\}$ も提供する。
 
 ---
@@ -461,7 +463,7 @@ dt^3/2 & 0 & dt^2 & 0 \\
 0 & dt^3/2 & 0 & dt^2
 \end{bmatrix}$$
 
-これは標準的な **Singer モデル** (Bar-Shalom et al., §6.3) であり、$\sigma_a$ は加速度の標準偏差
+これは標準的な **Singer モデル** (Bar-Shalom et al., §6.3) であり、 $\sigma_a$ は加速度の標準偏差
 である。パワースペクトル密度行列は $q(t) = \sigma_a^2 \cdot G G^\top$、
 $G = [0, 0, 1, 0;\ 0, 0, 0, 1]^\top$ であり、これを $dt$ にわたって積分したものである。
 
@@ -546,17 +548,17 @@ $\mu_1$ の高いエージェントへの接近をより強く罰する)。
 
 1. **予測。** すべてのトラックが `IMM::predict(dt)` を実行する。
 2. **対応づけ。** ゲート $\gamma = 9.21$ 以内にある (トラック, 検出) の全ペアについて
-   `(d², track_idx, det_idx)` のリストを構築する。昇順ソートし、$O(n \log n)$ で貪欲に割り当てる。
+   `(d², track_idx, det_idx)` のリストを構築する。昇順ソートし、 $O(n \log n)$ で貪欲に割り当てる。
    最小の $d^2$ をもつペアが最初にマッチし、両インデックスはその時点でロックされる。
 3. **更新。** マッチしたトラックは `IMM::update(z, R)` を実行する。マッチしなかったトラックは
    `misses` をインクリメントする。
 4. **生成。** マッチしなかった検出は暫定トラックを生成する。速度は `v_prior` が利用可能なら
    (Radar のドップラーから) それで初期化し、なければゼロとする。
-5. **削除・確定。** $misses > max\_miss = 5$ のトラックは削除する。$hits \ge min\_hits = 3$ の
+5. **削除・確定。** $misses > max\_miss = 5$ のトラックは削除する。 $hits \ge min\_hits = 3$ の
    トラックは `confirmed` に昇格させる。
 
 **マハラノビス・ゲート** $d^2 = \nu^\top S^{-1} \nu < \gamma$ は、センサノイズ水準を超えた誤対応を
-防止する。$\gamma = 9.21$ は、真のガウスモデルのもとで 99% の包含率に対応する。ゲート外に落ちる
+防止する。 $\gamma = 9.21$ は、真のガウスモデルのもとで 99% の包含率に対応する。ゲート外に落ちる
 1% の真の検出については、新規トラック生成によって処理される。
 
 ---
@@ -585,8 +587,8 @@ s^*(v, \Delta v) &= s_0 + \max\!\big(0,\ v T + v \Delta v / (2 \sqrt{a b})\big) 
 a_{IDM} &= a \big[1 - (v/v_{des})^4 - (s^*/s)^2\big]
 \end{aligned}$$
 
-パラメータ: $a = 1.5$ m/s² (最大加速度)、$b = 2.0$ m/s² (快適減速度)、$T = 1.5$ s (目標車頭時間)、
-$s_0 = 5.0$ m (最小停止時車間)、$v_{des} = 13.0$ m/s (目標速度)。IDM はプランニングホライズンに
+パラメータ: $a = 1.5$ m/s² (最大加速度)、 $b = 2.0$ m/s² (快適減速度)、 $T = 1.5$ s (目標車頭時間)、
+$s_0 = 5.0$ m (最小停止時車間)、 $v_{des} = 13.0$ m/s (目標速度)。IDM はプランニングホライズンに
 わたって連続的な速度プロファイルを生成する。
 
 $$\begin{aligned}
@@ -632,7 +634,7 @@ $$\begin{aligned}
 $$w = [1.0, 0.4, 4.0, 6.0, 1.0, 30.0]$$
 
 **安全棄却 (ハード制約)。** ホライズン内の任意のステップにおける、任意の予測エージェントに対する
-最小クリアランスを計算する。$\text{min\_clear} < \text{safe\_radius} = 4.5$ m の場合、その候補は
+最小クリアランスを計算する。 $\text{min\_clear} < \text{safe\_radius} = 4.5$ m の場合、その候補は
 `None` (実行不可能) とする。これはガードレールとは独立した、プランナ自身の衝突回避レイヤである。
 
 **緊急フォールバック。** すべての候補が実行不可能な場合、プランナは現在レーンで $1.5b$ で減速する
@@ -657,11 +659,11 @@ $$w = [1.0, 0.4, 4.0, 6.0, 1.0, 30.0]$$
 
 $$d_{RSS}(v_{ego}, v_{lead}) = v_{ego}\, \rho + \tfrac{1}{2} a_{ego}\, \rho^2 + (v_{ego} + \rho a_{ego})^2 / (2 b_{min}) - v_{lead}^2 / (2 b_{lead})$$
 
-ただし 0 でクランプする。パラメータ: $\rho = 0.4$ s、$a_{ego} = 1.0$ m/s²、$b_{min} = 4.0$ m/s²、
+ただし 0 でクランプする。パラメータ: $\rho = 0.4$ s、 $a_{ego} = 1.0$ m/s²、 $b_{min} = 4.0$ m/s²、
 $b_{lead} = 8.0$ m/s²。実際のギャップが $d_{RSS}$ を下回るとガードレールが発火する。
 
 **物理的解釈。** $v_{ego}\, \rho + \tfrac{1}{2} a_{ego}\, \rho^2$ は、自車が反応時間中に加速し
-続けながら進む距離である。$(v_{ego} + \rho a_{ego})^2 / (2 b_{min})$ はその後の停止距離である。
+続けながら進む距離である。 $(v_{ego} + \rho a_{ego})^2 / (2 b_{min})$ はその後の停止距離である。
 $v_{lead}^2 / (2 b_{lead})$ は先行車の停止距離である (先行車も停止するため減算される)。この式は、
 上記の最悪ケースモデルのもとで衝突が起きないことを保証する。
 
@@ -682,12 +684,12 @@ $\text{TTC} < 2.5$ s で発火する。TTC は RSS を補完するチェック�
 
 $$d_{lat}(v_{lat}) = \mu + v_{lat}\, \rho + \tfrac{1}{2} a_{lat\_max}\, \rho^2 + (v_{lat} + \rho a_{lat\_max})^2 / (2 b_{lat\_min})$$
 
-ここで $\mu = 0.5$ m はクリアランスバッファ、$a_{lat\_max} = 0.5$ m/s²、
+ここで $\mu = 0.5$ m はクリアランスバッファ、 $a_{lat\_max} = 0.5$ m/s²、
 $b_{lat\_min} = 1.0$ m/s² である。
 
 **カットイン判定条件** (すべてが同時に成立する必要がある):
 
-0. 横方向速度が妥当であること: $|vy_{agent}| \le v_{y,max} = 3$ m/s。$d_{lat}$ は $vy$ に対して
+0. 横方向速度が妥当であること: $|vy_{agent}| \le v_{y,max} = 3$ m/s。 $d_{lat}$ は $vy$ に対して
    単調増加するため、大きな $vy$ 推定値を持つゴーストトラックは $d_{lat}$ を膨張させ、下記の
    ギャップ判定を自明に成立させてしまう。実在の車両がこれを超える速さで割り込むことはない。
 1. エージェントが横方向に接近している: $(y_{agent} - y_{ego}) \cdot vy_{agent} < 0$。
@@ -735,7 +737,7 @@ $$\begin{aligned}
 P_i(\text{cell} \mid \text{horizon } k) &= \exp\!\big[-\tfrac{1}{2} \big( (X - x_k)^2 / (car_l + \sigma)^2 + (Y - y_k)^2 / (car_w + \sigma)^2 \big)\big]
 \end{aligned}$$
 
-ここで $\sigma_0 = 0.6$ m、$\gamma = 0.06$ m/step、$car_l = 2.2$ m (半長)、$car_w = 0.9$ m
+ここで $\sigma_0 = 0.6$ m、 $\gamma = 0.06$ m/step、 $car_l = 2.2$ m (半長)、 $car_w = 0.9$ m
 (半幅) である。ガウス分布の広がりはホライズンに対して線形に増大し、予測エージェント位置の
 不確かさが増していくことを反映している。
 
