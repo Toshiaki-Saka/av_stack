@@ -64,10 +64,12 @@ speed-keeping and, in `animation_demo.py`, for lateral lane-keeping.
 
 **`dlqr`.** Discrete LQR gain `K` via backward **DARE iteration**:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 P &\leftarrow Q + A^\top P A - A^\top P B (R + B^\top P B)^{-1} B^\top P A \quad \text{(until } \lVert \Delta P \rVert < tol) \\
 K &= (R + B^\top P B)^{-1} B^\top P A
-\end{aligned}$$
+\end{aligned}
+```
 
 Convergence is quadratic near the solution; `iters = 1000` and $tol = 1\times10^{-10}$
 are far more than needed for the 2-state model here.
@@ -109,10 +111,12 @@ two constant-velocity Kalman filters with different process noise: a low-noise
 *cruise* model ($q = 0.5$) and a high-noise *manoeuvre* model ($q = 6.0$). State
 $[x, y, v_x, v_y]$; each constituent filter runs the standard CV predict/update:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 \text{Predict:} \quad & \hat{x} = F x, \quad \hat{P} = F P F^\top + Q \quad \text{(} F = I + dt\cdot block,\ Q = \text{process noise)} \\
 \text{Update:} \quad & K = \hat{P} H^\top (H \hat{P} H^\top + R)^{-1}, \quad x \leftarrow \hat{x} + K(z - H \hat{x}), \quad P \leftarrow (I - KH) \hat{P}
-\end{aligned}$$
+\end{aligned}
+```
 
 **Mode mixing.** Each step the IMM interacts the two models (mixing their states by
 the Markov transition probabilities), runs both filters, then updates the mode
@@ -143,8 +147,8 @@ probability, and returns `Detection` objects with measurement `z` and covariance
 | Sensor | Noise model | R shape |
 |---|---|---|
 | **LiDAR** | Isotropic Gaussian $\sigma = 0.15$ m on $[x, y]$ | $\sigma^2 I_2$ |
-| **Radar** | Range noise $\sigma_r = 0.4$ m, lateral noise $\sigma_{lat} = 1.2$ m, rotated by LOS angle | $\operatorname{Rot} \cdot \operatorname{diag}(\sigma_r^2, \sigma_{lat}^2) \cdot \operatorname{Rot}^\top$ |
-| **Camera** | Bearing noise $\sigma = 0.6^\circ$, range relative error 10 %, rotated by LOS | $\operatorname{Rot} \cdot \operatorname{diag}((r\cdot err)^2, (r\cdot\sigma_b)^2) \cdot \operatorname{Rot}^\top$ |
+| **Radar** | Range noise $\sigma_r = 0.4$ m, lateral noise $\sigma_{lat} = 1.2$ m, rotated by LOS angle | $\mathrm{Rot} \cdot \mathrm{diag}(\sigma_r^2, \sigma_{lat}^2) \cdot \mathrm{Rot}^\top$ |
+| **Camera** | Bearing noise $\sigma = 0.6^\circ$, range relative error 10 %, rotated by LOS | $\mathrm{Rot} \cdot \mathrm{diag}((r\cdot err)^2, (r\cdot\sigma_b)^2) \cdot \mathrm{Rot}^\top$ |
 
 **Design choice — anisotropic R for Radar/Camera.** Euclidean gating would fail
 for the camera (range error can be several metres); using $(R_i + R_j)$ in the
@@ -200,10 +204,12 @@ The planner implements the classic **decoupled behaviour/trajectory** structure:
 
 3. **Scoring.** Accepted candidates are scored:
 
-   $$\begin{aligned}
+```math
+\begin{aligned}
    cost = {} & \text{speed-keeping} + (-\text{progress}) + \text{comfort}(\max v^2\kappa) + \text{lane-change penalty} \\
    & + \text{lane-preference} + 30/\text{min\_clear}
-   \end{aligned}$$
+   \end{aligned}
+```
 
    The soft `30/min_clear` term pushes the planner away from close agents without
    hard-rejecting them at large margins.

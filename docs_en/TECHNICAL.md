@@ -88,12 +88,14 @@ The kinematic bicycle collapses the four-wheeled vehicle to a single rear axle a
 one steering angle at the front axle. State $s = [x, y, \psi, v]^\top \in \mathbb{R}^4$, input
 $u = [a, \delta]^\top \in \mathbb{R}^2$:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 \dot{x} &= v \cos \psi \\
 \dot{y} &= v \sin \psi \\
 \dot{\psi} &= (v / L) \tan \delta \\
 \dot{v} &= a
-\end{aligned}$$
+\end{aligned}
+```
 
 where $L = 2.7$ m is the wheelbase. The model is valid at low-to-moderate slip
 angles; for highway speeds below tyre-limit conditions the kinematic assumption
@@ -104,13 +106,15 @@ holds to within a few percent of a dynamic (force-based) model.
 The discrete step $s_{k+1} = \Phi(s_k, u_k, dt)$ is computed with the classical
 fourth-order Runge–Kutta method:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 k_1 &= f(s_k, u_k) \\
 k_2 &= f(s_k + (dt/2) k_1,\ u_k) \\
 k_3 &= f(s_k + (dt/2) k_2,\ u_k) \\
 k_4 &= f(s_k + dt\, k_3,\ u_k) \\
 s_{k+1} &= s_k + \tfrac{dt}{6}(k_1 + 2k_2 + 2k_3 + k_4)
-\end{aligned}$$
+\end{aligned}
+```
 
 **Why RK4 and not Euler?** The local truncation error of Euler is $O(dt^2)$; for
 $dt = 0.1$ s and $v = 13$ m/s the yaw-rate term $v/L \cdot \tan \delta$ accumulates roughly
@@ -123,17 +127,21 @@ input.
 
 For the MPC and LQR linearisation, we need the discrete-time Jacobians:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 A_k &= \partial \Phi / \partial s \,\big|_{(s_k, u_k)} \in \mathbb{R}^{4\times 4} \\
 B_k &= \partial \Phi / \partial u \,\big|_{(s_k, u_k)} \in \mathbb{R}^{4\times 2}
-\end{aligned}$$
+\end{aligned}
+```
 
 These are computed numerically by central finite differences:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 A_k(i,j) &= \big[ \Phi(s_k + \varepsilon e_j, u_k) - \Phi(s_k - \varepsilon e_j, u_k) \big]_i / (2\varepsilon) \\
 B_k(i,j) &= \big[ \Phi(s_k, u_k + \varepsilon e_j) - \Phi(s_k, u_k - \varepsilon e_j) \big]_i / (2\varepsilon)
-\end{aligned}$$
+\end{aligned}
+```
 
 with $\varepsilon = 10^{-6}$. The key advantage over analytical Jacobians is **consistency**: the
 finite-difference Jacobian is guaranteed to be consistent with the same RK4 step
@@ -162,7 +170,7 @@ $N = 15$, $m = 2$).
 
 **`solve(A, b)` — Gauss–Jordan with partial pivoting.** For each column $c$:
 
-1. Find the pivot row $p = \operatorname*{argmax}_{i \ge c} |A(i,c)|$.
+1. Find the pivot row $p = \mathrm{argmax}_{i \ge c} |A(i,c)|$.
 2. Swap rows $c$ and $p$ in $A$ and $b$.
 3. Divide row $c$ by the diagonal entry.
 4. Eliminate column $c$ from all other rows.
@@ -204,18 +212,22 @@ $$J = \sum_{k=0}^{\infty} (e_k^\top Q e_k + u_k^\top R u_k), \quad u_k = -K e_k$
 
 **DARE solution.** The optimal gain satisfies:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 P &= Q + A^\top P A - A^\top P B (R + B^\top P B)^{-1} B^\top P A \quad \text{(Discrete Algebraic Riccati Equation)} \\
 K &= (R + B^\top P B)^{-1} B^\top P A
-\end{aligned}$$
+\end{aligned}
+```
 
 The implementation solves the DARE by **value iteration** (backward recursion in a
 finite-horizon approximation that converges to the infinite-horizon solution):
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 P_0 &= Q \\
 P_{n+1} &= Q + A^\top P_n A - A^\top P_n B (R + B^\top P_n B)^{-1} B^\top P_n A
-\end{aligned}$$
+\end{aligned}
+```
 
 This converges to the stabilising solution $P^*$ quadratically near the fixed point.
 Convergence criterion: $\lVert P_{n+1} - P_n \rVert_1 < 10^{-10}$ (typically in < 30 iterations for
@@ -224,17 +236,21 @@ the 2-state model). `iters = 1000` is a conservative upper bound.
 **Lateral path-tracking model.** The LQR is applied to the 2-state lateral error
 model $e = [e_y, e_\psi]^\top$:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 e_y' &= v \cdot e_\psi \\
 e_\psi' &= (v/L)\, \delta - v \kappa_{ref}
-\end{aligned}$$
+\end{aligned}
+```
 
 Discretised with Euler over $dt$:
 
-$$A = \begin{bmatrix} 1 & v \cdot dt \\ 0 & 1 \end{bmatrix}, \quad
+```math
+A = \begin{bmatrix} 1 & v \cdot dt \\ 0 & 1 \end{bmatrix}, \quad
 B = \begin{bmatrix} 0 \\ (v/L) \cdot dt \end{bmatrix}, \quad
-Q = \operatorname{diag}(q_{e_y}, q_{e_\psi}), \quad
-R = [r_\delta]$$
+Q = \mathrm{diag}(q_{e_y}, q_{e_\psi}), \quad
+R = [r_\delta]
+```
 
 The feedforward $\delta_{ff} = \arctan(L \kappa_{ref})$ cancels the curvature term, so the LQR
 only needs to regulate the residual errors. The gain $K$ is recomputed at each step
@@ -253,14 +269,16 @@ track the reference exactly for this constant-speed trajectory.
 Track a reference trajectory $\{(s_{ref,k}, u_{ref,k})\}_{k=0}^{N}$ over a receding
 horizon $N = 15$ steps ($dt = 0.1$ s, 1.5 s look-ahead) subject to box constraints:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 \min \quad & \sum_{k=1}^{N} e_k^\top \bar{Q} e_k + \sum_{k=0}^{N-1} \Delta u_k^\top \bar{R} \Delta u_k \\
 \text{s.t.} \quad & e_{k+1} = A_k e_k + B_k \Delta u_k + d_k, \quad e_k = s_k - s_{ref,k} \\
 & a_{min} \le u_{ref,k}(0) + \Delta u_k(0) \le a_{max} \\
 & \delta_{min} \le u_{ref,k}(1) + \Delta u_k(1) \le \delta_{max}
-\end{aligned}$$
+\end{aligned}
+```
 
-where $\bar{Q} = \operatorname{diag}(q_x, q_y, q_\psi, q_v)$ and $\bar{R} = \operatorname{diag}(r_a, r_\delta)$ are repeated
+where $\bar{Q} = \mathrm{diag}(q_x, q_y, q_\psi, q_v)$ and $\bar{R} = \mathrm{diag}(r_a, r_\delta)$ are repeated
 block-diagonal along the horizon, and $d_k = \Phi(s_{ref,k}, u_{ref,k}) - s_{ref,k+1}$ is
 the affine defect from the nonlinear reference trajectory.
 
@@ -295,14 +313,16 @@ $d_0, \dots, d_{k-1}$ through the product of $A$ matrices.
 
 **Condensed QP** (eliminating E):
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 & \min_{\Delta U} \ \tfrac{1}{2} \Delta U^\top H \Delta U + g^\top \Delta U \\
 & \text{s.t.} \quad lo \le \Delta U \le hi \\[4pt]
 & H = 2(S_u^\top \bar{Q}_{blk} S_u + \bar{R}_{blk}) \quad \text{(positive definite)} \\
 & g = 2 S_u^\top \bar{Q}_{blk}\, \text{offset} \\
 & lo[k \cdot m + j] = u_{min}[j] - u_{ref,k}[j] \\
 & hi[k \cdot m + j] = u_{max}[j] - u_{ref,k}[j]
-\end{aligned}$$
+\end{aligned}
+```
 
 $H$ is always positive definite because $\bar{R}_{blk}$ has strictly positive diagonal.
 
@@ -318,23 +338,27 @@ dependency and are overkill for the problem sizes here ($Nm = 30$).
 
 **Algorithm** (FISTA with momentum restart not implemented — plain FISTA suffices):
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 & \text{Initialise:} \ x_0 = y_0 = 0 \in \mathbb{R}^{Nm}, \ t_0 = 1 \\
 & \text{For } i = 0, 1, \dots, I-1: \\
 & \quad grad = 2 H y_i + g \quad \text{(gradient at } y_i\text{)} \\
 & \quad x_{i+1} = \Pi_{[lo,hi]}( y_i - \alpha \cdot grad ) \quad \text{(proximal step + projection)} \\
 & \quad t_{i+1} = (1 + \sqrt{1 + 4 t_i^2}) / 2 \\
 & \quad y_{i+1} = x_{i+1} + \frac{t_i - 1}{t_{i+1}}(x_{i+1} - x_i) \quad \text{(Nesterov momentum)}
-\end{aligned}$$
+\end{aligned}
+```
 
 **Step size.** The step size $\alpha = 1/L_f$ where $L_f = \lambda_{\max}(2H)$ is the Lipschitz
 constant of the gradient $2Hy + g$. The largest eigenvalue is estimated by 60
 iterations of the **power method**:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 v_0 &= (1/\sqrt{Nm})\, \mathbf{1}_{Nm} \\
 w_{k+1} &= H v_k / \lVert H v_k \rVert, \quad \lambda \approx \lVert H v_k \rVert
-\end{aligned}$$
+\end{aligned}
+```
 
 Power iteration converges at rate $(\lambda_1/\lambda_2)^k$; for well-conditioned $H$ (which is
 typical because $\bar{R}$ regularises) 60 iterations is conservative. Adding $10^{-9}$ to
@@ -361,10 +385,12 @@ frame position) and noise covariance $R \in \mathbb{R}^{2\times 2}$.
 
 LiDAR has near-isotropic spatial resolution; the noise is modelled as isotropic:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 z &= [x, y]^\top + n, \quad n \sim \mathcal{N}(0, \sigma_L^2 I_2), \quad \sigma_L = 0.15 \text{ m} \\
 R_L &= \sigma_L^2 I_2
-\end{aligned}$$
+\end{aligned}
+```
 
 Parameters: $r_{max} = 80$ m, $\theta_{fov} = 120°$, $p_{miss} = 0.05$.
 
@@ -374,11 +400,13 @@ Radar has high range resolution but poor cross-range (azimuth) resolution — th
 classic tradeoff for frequency-modulated continuous-wave (FMCW) systems. The noise
 is anisotropic along the line-of-sight (LOS):
 
-$$\begin{aligned}
-\text{Noise in LOS frame:} \quad & n_{LOS} \sim \mathcal{N}(0, \operatorname{diag}(\sigma_r^2, \sigma_{lat}^2)) \\
-\text{Noise in world frame:} \quad & n = \operatorname{Rot}(\alpha)\, n_{LOS}, \quad \alpha = \psi_{ego} + \beta_{detection} \\
-R_{Radar} &= \operatorname{Rot}(\alpha) \cdot \operatorname{diag}(\sigma_r^2, \sigma_{lat}^2) \cdot \operatorname{Rot}(\alpha)^\top
-\end{aligned}$$
+```math
+\begin{aligned}
+\text{Noise in LOS frame:} \quad & n_{LOS} \sim \mathcal{N}(0, \mathrm{diag}(\sigma_r^2, \sigma_{lat}^2)) \\
+\text{Noise in world frame:} \quad & n = \mathrm{Rot}(\alpha)\, n_{LOS}, \quad \alpha = \psi_{ego} + \beta_{detection} \\
+R_{Radar} &= \mathrm{Rot}(\alpha) \cdot \mathrm{diag}(\sigma_r^2, \sigma_{lat}^2) \cdot \mathrm{Rot}(\alpha)^\top
+\end{aligned}
+```
 
 with $\sigma_r = 0.4$ m (range), $\sigma_{lat} = 1.2$ m (lateral). Additionally, radar measures
 the **Doppler radial velocity** $v_r = (v_x \cos \alpha + v_y \sin \alpha) + n_v$, $n_v \sim \mathcal{N}(0, \sigma_{vr}^2)$,
@@ -389,13 +417,15 @@ $\sigma_{vr} = 0.1$ m/s. Parameters: $r_{max} = 120$ m, $\theta_{fov} = 90°$, $
 Camera has high angular (bearing) resolution but poor range resolution, which grows
 with distance (apparent-size-based range estimation):
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 \text{Bearing noise:} \quad & \sigma_b = 0.6° \quad \text{(}\sigma_{bearing}\text{ in radians)} \\
 \text{Range relative error:} \quad & \sigma_{range} / r = 10\% \\
-\text{Noise in polar frame:} \quad & (n_r, n_b) \sim \mathcal{N}(0, \operatorname{diag}((0.10 r)^2, r^2 \sigma_b^2)) \\
-\text{Noise in world frame:} \quad & n = \operatorname{Rot}(\alpha) \cdot [n_r, n_b]^\top \\
-R_{Camera} &= \operatorname{Rot}(\alpha) \cdot \operatorname{diag}((0.10 r)^2, (r \sigma_b)^2) \cdot \operatorname{Rot}(\alpha)^\top
-\end{aligned}$$
+\text{Noise in polar frame:} \quad & (n_r, n_b) \sim \mathcal{N}(0, \mathrm{diag}((0.10 r)^2, r^2 \sigma_b^2)) \\
+\text{Noise in world frame:} \quad & n = \mathrm{Rot}(\alpha) \cdot [n_r, n_b]^\top \\
+R_{Camera} &= \mathrm{Rot}(\alpha) \cdot \mathrm{diag}((0.10 r)^2, (r \sigma_b)^2) \cdot \mathrm{Rot}(\alpha)^\top
+\end{aligned}
+```
 
 Parameters: $r_{max} = 70$ m, $\theta_{fov} = 70°$, $p_{miss} = 0.04$. Camera also provides
 the object class label $kind \in \{car, truck, \dots\}$.
@@ -409,10 +439,12 @@ the object class label $kind \in \{car, truck, \dots\}$.
 Detections from all three sensors are first clustered to associate measurements that
 refer to the same physical object. Greedy nearest-neighbour with **Mahalanobis gating**:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 d^2(i, j) &= \Delta z_{ij}^\top (R_i + R_j)^{-1} \Delta z_{ij} < \gamma_{gate} = 9.21 \\
 \Delta z_{ij} &= z_i - z_j
-\end{aligned}$$
+\end{aligned}
+```
 
 The gate $\gamma_{gate} = 9.21$ is the 99th percentile of the $\chi^2(2)$ distribution, which is
 the chi-squared distribution with 2 degrees of freedom (the dimension of $z$). Using
@@ -428,10 +460,12 @@ Within each cluster, detections are fused by the **information-form weighted ave
 which is the maximum-likelihood estimate under the assumption of independent Gaussian
 noise:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 R_{fused}^{-1} &= \sum_i R_i^{-1} \quad \text{(sum of Fisher informations)} \\
 z_{fused} &= R_{fused} \cdot \sum_i R_i^{-1} z_i \quad \text{(information-weighted mean)}
-\end{aligned}$$
+\end{aligned}
+```
 
 This is equivalent to the Kalman update with multiple independent measurements applied
 sequentially (order-invariant). Properties:
@@ -444,10 +478,12 @@ sequentially (order-invariant). Properties:
 If the cluster contains a Radar detection, its Doppler reading `v_r` provides a rough
 velocity prior for initialising a new Kalman track:
 
-$$\begin{aligned}
-\alpha_{LOS} &= \operatorname{arctan2}(z_{fused}[1], z_{fused}[0]) \quad \text{(LOS angle from origin, approximate)} \\
+```math
+\begin{aligned}
+\alpha_{LOS} &= \mathrm{arctan2}(z_{fused}[1], z_{fused}[0]) \quad \text{(LOS angle from origin, approximate)} \\
 v_{prior} &= v_r \cdot [\cos \alpha_{LOS}, \sin \alpha_{LOS}]^\top
-\end{aligned}$$
+\end{aligned}
+```
 
 This warm-starts the Kalman filter's velocity state, reducing the cold-start velocity
 error from $O(v_{true})$ to $O(\sigma_{vr} \cdot \text{angular\_error})$.
@@ -460,28 +496,34 @@ error from $O(v_{true})$ to $O(\sigma_{vr} \cdot \text{angular\_error})$.
 
 Each track's single-model filter uses a constant-velocity prediction model:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 \text{State:} \quad & x = [x_p, y_p, v_x, v_y]^\top \in \mathbb{R}^4 \\
 \text{Measurement:} \quad & z = [x_p, y_p]^\top \quad \text{(position only)}
-\end{aligned}$$
+\end{aligned}
+```
 
 **Process model** (exact discretisation of constant-velocity continuous-time model):
 
-$$F = \begin{bmatrix}
+```math
+F = \begin{bmatrix}
 1 & 0 & dt & 0 \\
 0 & 1 & 0 & dt \\
 0 & 0 & 1 & 0 \\
 0 & 0 & 0 & 1
-\end{bmatrix}$$
+\end{bmatrix}
+```
 
 **Process noise** (continuous white-noise acceleration model, discretised):
 
-$$Q(dt) = \sigma_a^2 \cdot \begin{bmatrix}
+```math
+Q(dt) = \sigma_a^2 \cdot \begin{bmatrix}
 dt^4/4 & 0 & dt^3/2 & 0 \\
 0 & dt^4/4 & 0 & dt^3/2 \\
 dt^3/2 & 0 & dt^2 & 0 \\
 0 & dt^3/2 & 0 & dt^2
-\end{bmatrix}$$
+\end{bmatrix}
+```
 
 This is the standard **Singer model** (Bar-Shalom et al., §6.3) where $\sigma_a$ is the
 acceleration standard deviation. The power-spectral-density matrix is $q(t) = \sigma_a^2 \cdot G G^\top$,
@@ -489,21 +531,25 @@ $G = [0, 0, 1, 0;\ 0, 0, 0, 1]^\top$, integrated over $dt$.
 
 **Measurement model**:
 
-$$H = \begin{bmatrix}
+```math
+H = \begin{bmatrix}
 1 & 0 & 0 & 0 \\
 0 & 1 & 0 & 0
-\end{bmatrix}$$
+\end{bmatrix}
+```
 
 **Kalman update** (Joseph form for numerical stability is not used here; small
 matrices make catastrophic cancellation unlikely):
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 \nu &= z - H \hat{x} \quad \text{(innovation)} \\
 S &= H \hat{P} H^\top + R \quad \text{(innovation covariance)} \\
 K &= \hat{P} H^\top S^{-1} \quad \text{(Kalman gain)} \\
 x &\leftarrow \hat{x} + K \nu \\
 P &\leftarrow (I - K H) \hat{P}
-\end{aligned}$$
+\end{aligned}
+```
 
 The update also returns the **innovation likelihood** for IMM weighting:
 
@@ -522,10 +568,12 @@ process noises:
 The IMM probability vector $\mu = [\mu_0, \mu_1]^\top$ (sum to 1) reflects which model is
 currently active. A Markov transition matrix governs mode switching:
 
-$$\Pi = \begin{bmatrix}
+```math
+\Pi = \begin{bmatrix}
 p_{stay} & 1 - p_{stay} \\
 1 - p_{stay} & p_{stay}
-\end{bmatrix}, \quad p_{stay} = 0.95$$
+\end{bmatrix}, \quad p_{stay} = 0.95
+```
 
 **One IMM cycle** (per timestep):
 
@@ -535,10 +583,12 @@ $$\bar{c}_j = \sum_i \Pi_{ij} \mu_i \quad \text{(normaliser for mode } j\text{'s
 
 Compute the mixed initial condition for model $j$:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 \hat{x}^0_j &= \sum_i (\Pi_{ij} \mu_i / \bar{c}_j)\, x_i \\
 \hat{P}^0_j &= \sum_i (\Pi_{ij} \mu_i / \bar{c}_j) \big[ P_i + (x_i - \hat{x}^0_j)(x_i - \hat{x}^0_j)^\top \big]
-\end{aligned}$$
+\end{aligned}
+```
 
 **Step 2 — Mode-conditioned prediction.** Each filter $j$ predicts from $(\hat{x}^0_j, \hat{P}^0_j)$.
 
@@ -551,10 +601,12 @@ $$\mu_j(\text{new}) = L_j \bar{c}_j / \sum_k L_k \bar{c}_k$$
 
 **Step 5 — Fused estimate.**
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 \hat{x}_{IMM} &= \sum_j \mu_j \hat{x}_j \\
 P_{IMM} &= \sum_j \mu_j \big[ P_j + (\hat{x}_j - \hat{x}_{IMM})(\hat{x}_j - \hat{x}_{IMM})^\top \big]
-\end{aligned}$$
+\end{aligned}
+```
 
 The **manoeuvre probability $\mu_1$** is itself a useful output: it quantifies how
 aggressively the agent is manoeuvring and can gate downstream cost functions
@@ -604,20 +656,24 @@ lane changes.
 The IDM (Treiber et al., 2000) generates a smooth acceleration from the ego speed
 $v$, the gap to the lead $s$, and the lead speed $v_{lead}$:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 s^*(v, \Delta v) &= s_0 + \max\!\big(0,\ v T + v \Delta v / (2 \sqrt{a b})\big) \\
 a_{IDM} &= a \big[1 - (v/v_{des})^4 - (s^*/s)^2\big]
-\end{aligned}$$
+\end{aligned}
+```
 
 Parameters: $a = 1.5$ m/s² (max acceleration), $b = 2.0$ m/s² (comfortable deceleration),
 $T = 1.5$ s (desired time headway), $s_0 = 5.0$ m (minimum jam distance),
 $v_{des} = 13.0$ m/s (desired speed). The IDM produces a continuous speed profile over
 the planning horizon:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 v[k+1] &= \max(0,\ v[k] + a_{IDM}(v[k], s[k], v_{lead}[k]) \cdot dt) \\
 x[k+1] &= x[k] + v[k] \cdot dt
-\end{aligned}$$
+\end{aligned}
+```
 
 For each candidate lane, the nearest predicted in-lane lead is identified at each
 step $k$; if no lead exists, the free-road model is used ($s \to \infty$).
@@ -632,10 +688,12 @@ with a fixed target speed cannot model this regime transition.
 The lateral profile interpolates smoothly between the current lane $y_0$ and the
 target lane $y_{target}$:
 
-$$\begin{aligned}
-\sigma(t; a, b) &= \operatorname{clamp}((t-a)/(b-a),\ 0,\ 1) \\
+```math
+\begin{aligned}
+\sigma(t; a, b) &= \mathrm{clamp}((t-a)/(b-a),\ 0,\ 1) \\
 y(t) &= y_0 + (y_{target} - y_0) \cdot [ 3\sigma^2 - 2\sigma^3 ] \quad \text{(smoothstep, } C^1 \text{ continuous)}
-\end{aligned}$$
+\end{aligned}
+```
 
 $t_{change} = 3.0$ s is the lane-change duration. The smoothstep has zero first derivative
 at $t = a$ and $t = b$, so the lateral jerk is bounded (no impulse at the start or
@@ -647,14 +705,16 @@ the smoothstep is then used by the controller.
 For each candidate lane $y_{target} \in \{0.0, \text{LANE}\}$, a trajectory $(x[k], y[k], v[k])$
 is generated and scored. The cost function is:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 \text{cost} = {}& w_1\, \mathbb{E}[\lVert v - v_{des} \rVert^2] && \text{(speed keeping)} \\
 & - w_2\, (x[M] - x[0]) && \text{(progress reward, negative = maximise)} \\
 & + w_3\, \max_k(v[k]^2 |\kappa[k]|) && \text{(comfort: max lateral acceleration)} \\
 & + w_4\, [\text{target} \ne \text{ego\_lane}] && \text{(lane-change cost)} \\
 & + w_5\, |\text{target\_lane}| && \text{(right-lane preference, positive } y = \text{ left)} \\
 & + w_6 / \max(\text{min\_clear}, 10^{-3}) && \text{(margin penalty, soft)}
-\end{aligned}$$
+\end{aligned}
+```
 
 $$w = [1.0, 0.4, 4.0, 6.0, 1.0, 30.0]$$
 
@@ -737,10 +797,12 @@ longitudinal check has fired anyway and the lateral branch contributes nothing.
 
 When any check triggers:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 & \text{latch} \leftarrow \text{hold} = 8 \quad \text{(0.8 s at } dt = 0.1 \text{ s)} \\
 & \text{response: } a = -b_{emergency} = -6 \text{ m/s}^2, \ \delta = \delta_{previous} \text{ (hold steering)}
-\end{aligned}$$
+\end{aligned}
+```
 
 Each step, `latch` decrements. The guardrail overrides until $\text{latch} = 0$. This
 prevents the boundary oscillation that would occur if the override deactivated as
@@ -761,10 +823,12 @@ the planner.
 Each predicted agent trajectory $\{(x_k, y_k)\}_{k=0}^{K}$ is splatted as an
 axis-aligned Gaussian representing the agent's footprint with time-growing uncertainty:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 \sigma(k) &= \sigma_0 + \gamma k \quad \text{(uncertainty inflation)} \\
 P_i(\text{cell} \mid \text{horizon } k) &= \exp\!\big[-\tfrac{1}{2} \big( (X - x_k)^2 / (car_l + \sigma)^2 + (Y - y_k)^2 / (car_w + \sigma)^2 \big)\big]
-\end{aligned}$$
+\end{aligned}
+```
 
 with $\sigma_0 = 0.6$ m, $\gamma = 0.06$ m/step, $car_l = 2.2$ m (half-length), $car_w = 0.9$ m
 (half-width). The Gaussian spread grows linearly with horizon, reflecting the

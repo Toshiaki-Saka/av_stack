@@ -86,12 +86,14 @@ SIL 2 以上のモニタに要求する doer–checker パターンに対応し�
 キネマティック自転車モデルは、四輪車両を 1 本の後車軸と前車軸の 1 つの操舵角に縮約する。
 状態 $s = [x, y, \psi, v]^\top \in \mathbb{R}^4$、入力 $u = [a, \delta]^\top \in \mathbb{R}^2$ とすると:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 \dot{x} &= v \cos \psi \\
 \dot{y} &= v \sin \psi \\
 \dot{\psi} &= (v / L) \tan \delta \\
 \dot{v} &= a
-\end{aligned}$$
+\end{aligned}
+```
 
 ここで $L = 2.7$ m はホイールベースである。本モデルは低〜中程度のスリップ角領域で妥当であり、
 タイヤ限界に達しない高速道路速度域では、キネマティック仮定は動力学 (力ベース) モデルに対して
@@ -101,13 +103,15 @@ $$\begin{aligned}
 
 離散ステップ $s_{k+1} = \Phi(s_k, u_k, dt)$ は、古典的な 4 次 Runge–Kutta 法で計算する。
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 k_1 &= f(s_k, u_k) \\
 k_2 &= f(s_k + (dt/2) k_1,\ u_k) \\
 k_3 &= f(s_k + (dt/2) k_2,\ u_k) \\
 k_4 &= f(s_k + dt\, k_3,\ u_k) \\
 s_{k+1} &= s_k + \tfrac{dt}{6}(k_1 + 2k_2 + 2k_3 + k_4)
-\end{aligned}$$
+\end{aligned}
+```
 
 **なぜ Euler 法ではなく RK4 か。** Euler 法の局所打ち切り誤差は $O(dt^2)$ であり、
 $dt = 0.1$ s、 $v = 13$ m/s ではヨーレート項 $v/L \cdot \tan \delta$ が毎秒およそ
@@ -119,17 +123,21 @@ $dt = 0.1$ s、 $v = 13$ m/s ではヨーレート項 $v/L \cdot \tan \delta$ �
 
 MPC と LQR の線形化のため、離散時間ヤコビアンが必要となる。
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 A_k &= \partial \Phi / \partial s \,\big|_{(s_k, u_k)} \in \mathbb{R}^{4\times 4} \\
 B_k &= \partial \Phi / \partial u \,\big|_{(s_k, u_k)} \in \mathbb{R}^{4\times 2}
-\end{aligned}$$
+\end{aligned}
+```
 
 これらは中心差分により数値的に計算する。
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 A_k(i,j) &= \big[ \Phi(s_k + \varepsilon e_j, u_k) - \Phi(s_k - \varepsilon e_j, u_k) \big]_i / (2\varepsilon) \\
 B_k(i,j) &= \big[ \Phi(s_k, u_k + \varepsilon e_j) - \Phi(s_k, u_k - \varepsilon e_j) \big]_i / (2\varepsilon)
-\end{aligned}$$
+\end{aligned}
+```
 
 ここで $\varepsilon = 10^{-6}$ である。解析的ヤコビアンに対する最大の利点は**整合性**にある。
 差分ヤコビアンは、プラントが使用するのと同一の RK4 ステップと必ず整合するため、LTV 誤差モデル
@@ -155,7 +163,7 @@ $N \cdot m = 30$) だからである。
 
 **`solve(A, b)` — 部分ピボット選択付き Gauss–Jordan 法。** 各列 $c$ について:
 
-1. ピボット行 $p = \operatorname*{argmax}_{i \ge c} |A(i,c)|$ を求める。
+1. ピボット行 $p = \mathrm{argmax}_{i \ge c} |A(i,c)|$ を求める。
 2. $A$ と $b$ の行 $c$ と行 $p$ を入れ替える。
 3. 行 $c$ を対角要素で除算する。
 4. 他のすべての行から列 $c$ を消去する。
@@ -194,18 +202,22 @@ $$J = \sum_{k=0}^{\infty} (e_k^\top Q e_k + u_k^\top R u_k), \quad u_k = -K e_k$
 
 **DARE による解。** 最適ゲインは次を満たす。
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 P &= Q + A^\top P A - A^\top P B (R + B^\top P B)^{-1} B^\top P A \quad \text{(Discrete Algebraic Riccati Equation)} \\
 K &= (R + B^\top P B)^{-1} B^\top P A
-\end{aligned}$$
+\end{aligned}
+```
 
 実装では **価値反復** (有限ホライズン近似における後退再帰であり、無限ホライズン解へ収束する) に
 より DARE を解く。
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 P_0 &= Q \\
 P_{n+1} &= Q + A^\top P_n A - A^\top P_n B (R + B^\top P_n B)^{-1} B^\top P_n A
-\end{aligned}$$
+\end{aligned}
+```
 
 これは不動点近傍で安定化解 $P^*$ に二次収束する。収束判定は
 $\lVert P_{n+1} - P_n \rVert_1 < 10^{-10}$ (2 状態モデルでは通常 30 反復未満) であり、
@@ -213,17 +225,21 @@ $\lVert P_{n+1} - P_n \rVert_1 < 10^{-10}$ (2 状態モデルでは通常 30 反
 
 **横方向経路追従モデル。** LQR は 2 状態の横方向誤差モデル $e = [e_y, e_\psi]^\top$ に適用する。
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 e_y' &= v \cdot e_\psi \\
 e_\psi' &= (v/L)\, \delta - v \kappa_{ref}
-\end{aligned}$$
+\end{aligned}
+```
 
 $dt$ で Euler 離散化すると:
 
-$$A = \begin{bmatrix} 1 & v \cdot dt \\ 0 & 1 \end{bmatrix}, \quad
+```math
+A = \begin{bmatrix} 1 & v \cdot dt \\ 0 & 1 \end{bmatrix}, \quad
 B = \begin{bmatrix} 0 \\ (v/L) \cdot dt \end{bmatrix}, \quad
-Q = \operatorname{diag}(q_{e_y}, q_{e_\psi}), \quad
-R = [r_\delta]$$
+Q = \mathrm{diag}(q_{e_y}, q_{e_\psi}), \quad
+R = [r_\delta]
+```
 
 フィードフォワード項 $\delta_{ff} = \arctan(L \kappa_{ref})$ が曲率項を打ち消すため、LQR は残差
 誤差の抑制のみを担えばよい。ゲイン $K$ は各ステップで現在速度 $v$ (停車時の特異性を避けるため
@@ -241,15 +257,17 @@ R = [r_\delta]$$
 参照軌道 $\{(s_{ref,k}, u_{ref,k})\}_{k=0}^{N}$ を、後退ホライズン $N = 15$ ステップ
 ($dt = 0.1$ s、1.5 s 先読み) にわたり、ボックス制約のもとで追従する。
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 \min \quad & \sum_{k=1}^{N} e_k^\top \bar{Q} e_k + \sum_{k=0}^{N-1} \Delta u_k^\top \bar{R} \Delta u_k \\
 \text{s.t.} \quad & e_{k+1} = A_k e_k + B_k \Delta u_k + d_k, \quad e_k = s_k - s_{ref,k} \\
 & a_{min} \le u_{ref,k}(0) + \Delta u_k(0) \le a_{max} \\
 & \delta_{min} \le u_{ref,k}(1) + \Delta u_k(1) \le \delta_{max}
-\end{aligned}$$
+\end{aligned}
+```
 
-ここで $\bar{Q} = \operatorname{diag}(q_x, q_y, q_\psi, q_v)$ と
-$\bar{R} = \operatorname{diag}(r_a, r_\delta)$ はホライズン方向にブロック対角として繰り返され、
+ここで $\bar{Q} = \mathrm{diag}(q_x, q_y, q_\psi, q_v)$ と
+$\bar{R} = \mathrm{diag}(r_a, r_\delta)$ はホライズン方向にブロック対角として繰り返され、
 $d_k = \Phi(s_{ref,k}, u_{ref,k}) - s_{ref,k+1}$ は非線形参照軌道からのアフィン defect (欠損項)
 である。
 
@@ -282,14 +300,16 @@ $d_0, \dots, d_{k-1}$ を $A$ 行列の積を通して伝播させる。
 
 **凝縮 QP** (E を消去):
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 & \min_{\Delta U} \ \tfrac{1}{2} \Delta U^\top H \Delta U + g^\top \Delta U \\
 & \text{s.t.} \quad lo \le \Delta U \le hi \\[4pt]
 & H = 2(S_u^\top \bar{Q}_{blk} S_u + \bar{R}_{blk}) \quad \text{(positive definite)} \\
 & g = 2 S_u^\top \bar{Q}_{blk}\, \text{offset} \\
 & lo[k \cdot m + j] = u_{min}[j] - u_{ref,k}[j] \\
 & hi[k \cdot m + j] = u_{max}[j] - u_{ref,k}[j]
-\end{aligned}$$
+\end{aligned}
+```
 
 $\bar{R}_{blk}$ の対角が厳密に正であるため、 $H$ は常に正定である。
 
@@ -303,23 +323,27 @@ FISTA (Fast Iterative Shrinkage-Thresholding Algorithm; Beck & Teboulle, 2009) �
 
 **アルゴリズム** (モーメンタムのリスタートは未実装。素の FISTA で十分):
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 & \text{Initialise:} \ x_0 = y_0 = 0 \in \mathbb{R}^{Nm}, \ t_0 = 1 \\
 & \text{For } i = 0, 1, \dots, I-1: \\
 & \quad grad = 2 H y_i + g \quad \text{(gradient at } y_i\text{)} \\
 & \quad x_{i+1} = \Pi_{[lo,hi]}( y_i - \alpha \cdot grad ) \quad \text{(proximal step + projection)} \\
 & \quad t_{i+1} = (1 + \sqrt{1 + 4 t_i^2}) / 2 \\
 & \quad y_{i+1} = x_{i+1} + \frac{t_i - 1}{t_{i+1}}(x_{i+1} - x_i) \quad \text{(Nesterov momentum)}
-\end{aligned}$$
+\end{aligned}
+```
 
 **ステップサイズ。** ステップサイズは $\alpha = 1/L_f$ とする。ここで
 $L_f = \lambda_{\max}(2H)$ は勾配 $2Hy + g$ の Lipschitz 定数である。最大固有値は**べき乗法**を
 60 回反復して推定する。
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 v_0 &= (1/\sqrt{Nm})\, \mathbf{1}_{Nm} \\
 w_{k+1} &= H v_k / \lVert H v_k \rVert, \quad \lambda \approx \lVert H v_k \rVert
-\end{aligned}$$
+\end{aligned}
+```
 
 べき乗反復は $(\lambda_1/\lambda_2)^k$ の速度で収束する。 $H$ が良条件 ($\bar{R}$ が正則化として
 働くため通常はそうなる) の場合、60 反復は保守的な設定である。べき乗法の推定値に $10^{-9}$ を
@@ -345,10 +369,12 @@ $R \in \mathbb{R}^{2\times 2}$ をもつ検出を返す。
 
 LiDAR の空間分解能はほぼ等方的であるため、ノイズも等方としてモデル化する。
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 z &= [x, y]^\top + n, \quad n \sim \mathcal{N}(0, \sigma_L^2 I_2), \quad \sigma_L = 0.15 \text{ m} \\
 R_L &= \sigma_L^2 I_2
-\end{aligned}$$
+\end{aligned}
+```
 
 パラメータ: $r_{max} = 80$ m、 $\theta_{fov} = 120°$、 $p_{miss} = 0.05$。
 
@@ -357,11 +383,13 @@ R_L &= \sigma_L^2 I_2
 Radar は距離分解能が高い一方、クロスレンジ (方位) 分解能は低い。これは FMCW (周波数変調連続波)
 方式に典型的なトレードオフである。ノイズは視線方向 (LOS) に沿って異方的となる。
 
-$$\begin{aligned}
-\text{Noise in LOS frame:} \quad & n_{LOS} \sim \mathcal{N}(0, \operatorname{diag}(\sigma_r^2, \sigma_{lat}^2)) \\
-\text{Noise in world frame:} \quad & n = \operatorname{Rot}(\alpha)\, n_{LOS}, \quad \alpha = \psi_{ego} + \beta_{detection} \\
-R_{Radar} &= \operatorname{Rot}(\alpha) \cdot \operatorname{diag}(\sigma_r^2, \sigma_{lat}^2) \cdot \operatorname{Rot}(\alpha)^\top
-\end{aligned}$$
+```math
+\begin{aligned}
+\text{Noise in LOS frame:} \quad & n_{LOS} \sim \mathcal{N}(0, \mathrm{diag}(\sigma_r^2, \sigma_{lat}^2)) \\
+\text{Noise in world frame:} \quad & n = \mathrm{Rot}(\alpha)\, n_{LOS}, \quad \alpha = \psi_{ego} + \beta_{detection} \\
+R_{Radar} &= \mathrm{Rot}(\alpha) \cdot \mathrm{diag}(\sigma_r^2, \sigma_{lat}^2) \cdot \mathrm{Rot}(\alpha)^\top
+\end{aligned}
+```
 
 ここで $\sigma_r = 0.4$ m (距離方向)、 $\sigma_{lat} = 1.2$ m (横方向) である。さらに Radar は
 **ドップラー視線速度** $v_r = (v_x \cos \alpha + v_y \sin \alpha) + n_v$ を計測する。ここで
@@ -373,13 +401,15 @@ $r_{max} = 120$ m、 $\theta_{fov} = 90°$、 $p_{miss} = 0.05$。
 Camera は角度 (方位) 分解能が高い一方、距離分解能は低く、しかも距離とともに悪化する (見かけの
 大きさに基づく距離推定のため)。
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 \text{Bearing noise:} \quad & \sigma_b = 0.6° \quad \text{(}\sigma_{bearing}\text{ in radians)} \\
 \text{Range relative error:} \quad & \sigma_{range} / r = 10\% \\
-\text{Noise in polar frame:} \quad & (n_r, n_b) \sim \mathcal{N}(0, \operatorname{diag}((0.10 r)^2, r^2 \sigma_b^2)) \\
-\text{Noise in world frame:} \quad & n = \operatorname{Rot}(\alpha) \cdot [n_r, n_b]^\top \\
-R_{Camera} &= \operatorname{Rot}(\alpha) \cdot \operatorname{diag}((0.10 r)^2, (r \sigma_b)^2) \cdot \operatorname{Rot}(\alpha)^\top
-\end{aligned}$$
+\text{Noise in polar frame:} \quad & (n_r, n_b) \sim \mathcal{N}(0, \mathrm{diag}((0.10 r)^2, r^2 \sigma_b^2)) \\
+\text{Noise in world frame:} \quad & n = \mathrm{Rot}(\alpha) \cdot [n_r, n_b]^\top \\
+R_{Camera} &= \mathrm{Rot}(\alpha) \cdot \mathrm{diag}((0.10 r)^2, (r \sigma_b)^2) \cdot \mathrm{Rot}(\alpha)^\top
+\end{aligned}
+```
 
 パラメータ: $r_{max} = 70$ m、 $\theta_{fov} = 70°$、 $p_{miss} = 0.04$。Camera は物体のクラス
 ラベル $kind \in \{car, truck, \dots\}$ も提供する。
@@ -393,10 +423,12 @@ R_{Camera} &= \operatorname{Rot}(\alpha) \cdot \operatorname{diag}((0.10 r)^2, (
 3 つのセンサすべての検出は、まず同一物理物体を指す観測どうしを対応づけるためにクラスタリング
 される。**マハラノビス・ゲーティング**を伴う貪欲最近傍法を用いる。
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 d^2(i, j) &= \Delta z_{ij}^\top (R_i + R_j)^{-1} \Delta z_{ij} < \gamma_{gate} = 9.21 \\
 \Delta z_{ij} &= z_i - z_j
-\end{aligned}$$
+\end{aligned}
+```
 
 ゲート $\gamma_{gate} = 9.21$ は $\chi^2(2)$ 分布 (自由度 2、すなわち $z$ の次元) の 99 パーセンタイル
 である。固定的なユークリッド距離ではなく**和共分散** $R_i + R_j$ を用いることは、Camera 検出に
@@ -409,10 +441,12 @@ d^2(i, j) &= \Delta z_{ij}^\top (R_i + R_j)^{-1} \Delta z_{ij} < \gamma_{gate} =
 各クラスタ内では、検出値を**情報形式の重み付き平均**により融合する。これは、独立なガウスノイズを
 仮定したときの最尤推定値である。
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 R_{fused}^{-1} &= \sum_i R_i^{-1} \quad \text{(sum of Fisher informations)} \\
 z_{fused} &= R_{fused} \cdot \sum_i R_i^{-1} z_i \quad \text{(information-weighted mean)}
-\end{aligned}$$
+\end{aligned}
+```
 
 これは、独立な複数の観測を逐次的に適用したカルマン更新と等価である (順序不変)。性質は次のとおり。
 - 融合後の共分散は、常に個々の $R_i$ のいずれよりも小さい。
@@ -424,10 +458,12 @@ z_{fused} &= R_{fused} \cdot \sum_i R_i^{-1} z_i \quad \text{(information-weight
 クラスタに Radar 検出が含まれる場合、そのドップラー値 `v_r` は新規カルマントラックを初期化する
 ための粗い速度事前値を与える。
 
-$$\begin{aligned}
-\alpha_{LOS} &= \operatorname{arctan2}(z_{fused}[1], z_{fused}[0]) \quad \text{(LOS angle from origin, approximate)} \\
+```math
+\begin{aligned}
+\alpha_{LOS} &= \mathrm{arctan2}(z_{fused}[1], z_{fused}[0]) \quad \text{(LOS angle from origin, approximate)} \\
 v_{prior} &= v_r \cdot [\cos \alpha_{LOS}, \sin \alpha_{LOS}]^\top
-\end{aligned}$$
+\end{aligned}
+```
 
 これによりカルマンフィルタの速度状態がウォームスタートされ、コールドスタート時の速度誤差が
 $O(v_{true})$ から $O(\sigma_{vr} \cdot \text{angular\_error})$ へ低減される。
@@ -440,28 +476,34 @@ $O(v_{true})$ から $O(\sigma_{vr} \cdot \text{angular\_error})$ へ低減さ�
 
 各トラックの単一モデルフィルタは、等速度予測モデルを用いる。
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 \text{State:} \quad & x = [x_p, y_p, v_x, v_y]^\top \in \mathbb{R}^4 \\
 \text{Measurement:} \quad & z = [x_p, y_p]^\top \quad \text{(position only)}
-\end{aligned}$$
+\end{aligned}
+```
 
 **プロセスモデル** (連続時間等速度モデルの厳密離散化):
 
-$$F = \begin{bmatrix}
+```math
+F = \begin{bmatrix}
 1 & 0 & dt & 0 \\
 0 & 1 & 0 & dt \\
 0 & 0 & 1 & 0 \\
 0 & 0 & 0 & 1
-\end{bmatrix}$$
+\end{bmatrix}
+```
 
 **プロセスノイズ** (連続白色雑音加速度モデルを離散化したもの):
 
-$$Q(dt) = \sigma_a^2 \cdot \begin{bmatrix}
+```math
+Q(dt) = \sigma_a^2 \cdot \begin{bmatrix}
 dt^4/4 & 0 & dt^3/2 & 0 \\
 0 & dt^4/4 & 0 & dt^3/2 \\
 dt^3/2 & 0 & dt^2 & 0 \\
 0 & dt^3/2 & 0 & dt^2
-\end{bmatrix}$$
+\end{bmatrix}
+```
 
 これは標準的な **Singer モデル** (Bar-Shalom et al., §6.3) であり、 $\sigma_a$ は加速度の標準偏差
 である。パワースペクトル密度行列は $q(t) = \sigma_a^2 \cdot G G^\top$、
@@ -469,21 +511,25 @@ $G = [0, 0, 1, 0;\ 0, 0, 0, 1]^\top$ であり、これを $dt$ にわたって�
 
 **観測モデル**:
 
-$$H = \begin{bmatrix}
+```math
+H = \begin{bmatrix}
 1 & 0 & 0 & 0 \\
 0 & 1 & 0 & 0
-\end{bmatrix}$$
+\end{bmatrix}
+```
 
 **カルマン更新** (数値安定性のための Joseph 形式はここでは使用しない。行列が小さいため、
 桁落ちが致命的になる可能性は低い):
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 \nu &= z - H \hat{x} \quad \text{(innovation)} \\
 S &= H \hat{P} H^\top + R \quad \text{(innovation covariance)} \\
 K &= \hat{P} H^\top S^{-1} \quad \text{(Kalman gain)} \\
 x &\leftarrow \hat{x} + K \nu \\
 P &\leftarrow (I - K H) \hat{P}
-\end{aligned}$$
+\end{aligned}
+```
 
 更新処理は、IMM の重み付けに用いる**イノベーション尤度**も返す。
 
@@ -501,10 +547,12 @@ IMM (Blom & Bar-Shalom, 1988) は、プロセスノイズの異なる 2 つの C
 IMM のモデル確率ベクトル $\mu = [\mu_0, \mu_1]^\top$ (総和 1) は、現在どちらのモデルが有効かを
 表す。モード遷移はマルコフ遷移行列に従う。
 
-$$\Pi = \begin{bmatrix}
+```math
+\Pi = \begin{bmatrix}
 p_{stay} & 1 - p_{stay} \\
 1 - p_{stay} & p_{stay}
-\end{bmatrix}, \quad p_{stay} = 0.95$$
+\end{bmatrix}, \quad p_{stay} = 0.95
+```
 
 **IMM の 1 サイクル** (タイムステップごと):
 
@@ -514,10 +562,12 @@ $$\bar{c}_j = \sum_i \Pi_{ij} \mu_i \quad \text{(normaliser for mode } j\text{'s
 
 モデル $j$ に対する混合初期条件を計算する。
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 \hat{x}^0_j &= \sum_i (\Pi_{ij} \mu_i / \bar{c}_j)\, x_i \\
 \hat{P}^0_j &= \sum_i (\Pi_{ij} \mu_i / \bar{c}_j) \big[ P_i + (x_i - \hat{x}^0_j)(x_i - \hat{x}^0_j)^\top \big]
-\end{aligned}$$
+\end{aligned}
+```
 
 **ステップ 2 — モード条件付き予測。** 各フィルタ $j$ が $(\hat{x}^0_j, \hat{P}^0_j)$ から予測する。
 
@@ -530,10 +580,12 @@ $$\mu_j(\text{new}) = L_j \bar{c}_j / \sum_k L_k \bar{c}_k$$
 
 **ステップ 5 — 融合推定。**
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 \hat{x}_{IMM} &= \sum_j \mu_j \hat{x}_j \\
 P_{IMM} &= \sum_j \mu_j \big[ P_j + (\hat{x}_j - \hat{x}_{IMM})(\hat{x}_j - \hat{x}_{IMM})^\top \big]
-\end{aligned}$$
+\end{aligned}
+```
 
 **マヌーバ確率 $\mu_1$** それ自体が有用な出力である。これは対象エージェントがどれだけ激しい
 機動を行っているかを定量化し、下流のコスト関数のゲーティングに利用できる (例: プランナが
@@ -582,19 +634,23 @@ $\mu_1$ の高いエージェントへの接近をより強く罰する)。
 IDM (Treiber et al., 2000) は、自車速度 $v$、先行車とのギャップ $s$、先行車速度 $v_{lead}$ から
 滑らかな加速度を生成する。
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 s^*(v, \Delta v) &= s_0 + \max\!\big(0,\ v T + v \Delta v / (2 \sqrt{a b})\big) \\
 a_{IDM} &= a \big[1 - (v/v_{des})^4 - (s^*/s)^2\big]
-\end{aligned}$$
+\end{aligned}
+```
 
 パラメータ: $a = 1.5$ m/s² (最大加速度)、 $b = 2.0$ m/s² (快適減速度)、 $T = 1.5$ s (目標車頭時間)、
 $s_0 = 5.0$ m (最小停止時車間)、 $v_{des} = 13.0$ m/s (目標速度)。IDM はプランニングホライズンに
 わたって連続的な速度プロファイルを生成する。
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 v[k+1] &= \max(0,\ v[k] + a_{IDM}(v[k], s[k], v_{lead}[k]) \cdot dt) \\
 x[k+1] &= x[k] + v[k] \cdot dt
-\end{aligned}$$
+\end{aligned}
+```
 
 各候補レーンについて、各ステップ $k$ で同一レーン内の最も近い予測先行車を特定する。先行車が
 存在しない場合は自由走行モデル ($s \to \infty$) を用いる。
@@ -607,10 +663,12 @@ x[k+1] &= x[k] + v[k] \cdot dt
 
 横方向プロファイルは、現在レーン $y_0$ と目標レーン $y_{target}$ の間を滑らかに補間する。
 
-$$\begin{aligned}
-\sigma(t; a, b) &= \operatorname{clamp}((t-a)/(b-a),\ 0,\ 1) \\
+```math
+\begin{aligned}
+\sigma(t; a, b) &= \mathrm{clamp}((t-a)/(b-a),\ 0,\ 1) \\
 y(t) &= y_0 + (y_{target} - y_0) \cdot [ 3\sigma^2 - 2\sigma^3 ] \quad \text{(smoothstep, } C^1 \text{ continuous)}
-\end{aligned}$$
+\end{aligned}
+```
 
 $t_{change} = 3.0$ s はレーンチェンジ所要時間である。smoothstep は $t = a$ および $t = b$ で
 一階微分がゼロとなるため、横方向のジャークが有界となる (機動の開始時・終了時にインパルスが
@@ -622,14 +680,16 @@ $t_{change} = 3.0$ s はレーンチェンジ所要時間である。smoothstep 
 各候補レーン $y_{target} \in \{0.0, \text{LANE}\}$ について、軌道 $(x[k], y[k], v[k])$ を生成し
 スコアリングする。コスト関数は次のとおりである。
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 \text{cost} = {}& w_1\, \mathbb{E}[\lVert v - v_{des} \rVert^2] && \text{(speed keeping)} \\
 & - w_2\, (x[M] - x[0]) && \text{(progress reward, negative = maximise)} \\
 & + w_3\, \max_k(v[k]^2 |\kappa[k]|) && \text{(comfort: max lateral acceleration)} \\
 & + w_4\, [\text{target} \ne \text{ego\_lane}] && \text{(lane-change cost)} \\
 & + w_5\, |\text{target\_lane}| && \text{(right-lane preference, positive } y = \text{ left)} \\
 & + w_6 / \max(\text{min\_clear}, 10^{-3}) && \text{(margin penalty, soft)}
-\end{aligned}$$
+\end{aligned}
+```
 
 $$w = [1.0, 0.4, 4.0, 6.0, 1.0, 30.0]$$
 
@@ -709,10 +769,12 @@ $b_{lat\_min} = 1.0$ m/s² である。
 
 いずれかのチェックが発火したとき:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 & \text{latch} \leftarrow \text{hold} = 8 \quad \text{(0.8 s at } dt = 0.1 \text{ s)} \\
 & \text{response: } a = -b_{emergency} = -6 \text{ m/s}^2, \ \delta = \delta_{previous} \text{ (hold steering)}
-\end{aligned}$$
+\end{aligned}
+```
 
 `latch` は各ステップでデクリメントされる。ガードレールは $\text{latch} = 0$ になるまでオーバー
 ライドを継続する。これは、RSS 条件が解消した瞬間にオーバーライドを解除した場合に生じる境界での
@@ -732,10 +794,12 @@ $b_{emergency} \cdot 0.8 \approx 4.8$ m/s だけ減速しており、通常は�
 予測された各エージェント軌道 $\{(x_k, y_k)\}_{k=0}^{K}$ は、時間とともに不確かさが増大する
 エージェントのフットプリントを表す、軸平行ガウス分布としてスプラット (splat) される。
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 \sigma(k) &= \sigma_0 + \gamma k \quad \text{(uncertainty inflation)} \\
 P_i(\text{cell} \mid \text{horizon } k) &= \exp\!\big[-\tfrac{1}{2} \big( (X - x_k)^2 / (car_l + \sigma)^2 + (Y - y_k)^2 / (car_w + \sigma)^2 \big)\big]
-\end{aligned}$$
+\end{aligned}
+```
 
 ここで $\sigma_0 = 0.6$ m、 $\gamma = 0.06$ m/step、 $car_l = 2.2$ m (半長)、 $car_w = 0.9$ m
 (半幅) である。ガウス分布の広がりはホライズンに対して線形に増大し、予測エージェント位置の

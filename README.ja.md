@@ -151,10 +151,12 @@ pybind11 を通じて公開される。`python/` はユーザに面した可視�
 キネマティック・バイシクルモデルが、スタック全体を通じた予測およびシミュレーションの
 モデルである。
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 &s = [x, y, \psi, v] \qquad u = [a, \delta] \\
 &\dot{x} = v\cos\psi, \quad \dot{y} = v\sin\psi, \quad \dot{\psi} = (v/L)\tan\delta, \quad \dot{v} = a
-\end{aligned}$$
+\end{aligned}
+```
 
 積分は (オイラー法ではなく) **RK4** で行う。これは $dt = 0.1$ s における MPC の予測精度に
 とって決定的である。RK4 ステップのヤコビアン $A = \partial f/\partial s$、 $B = \partial f/\partial u$ は
@@ -235,10 +237,12 @@ $$R_{fused} = \left(\sum_i R_i^{-1}\right)^{-1}, \quad z_{fused} = R_{fused} \su
 1. **IDM ロールアウト** — **Intelligent Driver Model** を用いて、予測された同一車線内の
    先行車に対し、自車を縦方向にロールアウトする。
 
-   $$\begin{aligned}
+```math
+\begin{aligned}
    s^* &= s_0 + vT + \frac{v\cdot\Delta v}{2\sqrt{a\cdot b}} \\
    a_{IDM} &= a\left[1 - (v/v_{des})^4 - (s^*/gap)^2\right] \quad \text{clipped to } [-1.5b, a]
-   \end{aligned}$$
+   \end{aligned}
+```
 
 2. **スムーズステップ横方向遷移** — 現在の車線から目標車線へ $t_{change} = 3$ s かけてブレンドする。
 

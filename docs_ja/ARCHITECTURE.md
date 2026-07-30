@@ -44,10 +44,12 @@
 
 **`dlqr`。** 後退 **DARE 反復** により離散 LQR ゲイン `K` を求める。
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 P &\leftarrow Q + A^\top P A - A^\top P B (R + B^\top P B)^{-1} B^\top P A \quad \text{(until } \lVert \Delta P \rVert < tol) \\
 K &= (R + B^\top P B)^{-1} B^\top P A
-\end{aligned}$$
+\end{aligned}
+```
 
 解の近傍では収束は 2 次であり、`iters = 1000` と $tol = 1\times10^{-10}$ は、ここで扱う 2 状態モデルには十分すぎる設定である。
 
@@ -73,10 +75,12 @@ $$\min \tfrac{1}{2} \Delta U^\top H \Delta U + g^\top \Delta U \quad \text{s.t.}
 
 物体ごとに **IMM（Interacting Multiple Model）** フィルタ（`struct IMM`）を割り当て、プロセスノイズの異なる 2 つの等速度（CV）カルマンフィルタ、すなわち低ノイズの *巡航* モデル（$`q = 0.5`$）と高ノイズの *機動* モデル（$`q = 6.0`$）を混合する。状態は $[x, y, v_x, v_y]$ であり、各構成フィルタは標準的な CV の予測／更新を実行する。
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 \text{Predict:} \quad & \hat{x} = F x, \quad \hat{P} = F P F^\top + Q \quad \text{(} F = I + dt\cdot block,\ Q = \text{process noise)} \\
 \text{Update:} \quad & K = \hat{P} H^\top (H \hat{P} H^\top + R)^{-1}, \quad x \leftarrow \hat{x} + K(z - H \hat{x}), \quad P \leftarrow (I - KH) \hat{P}
-\end{aligned}$$
+\end{aligned}
+```
 
 **モード混合。** 各ステップで IMM は 2 つのモデルを相互作用させ（マルコフ遷移確率に基づいて状態を混合し）、両フィルタを実行したうえで、各モデルの観測尤度からモード確率 $\mu$ を更新し、 $\mu$ で重み付けした混合として統合推定値を構成する。`p_manoeuvre()` は機動モードの確率を公開する。これにより、対象が巡航している間は推定を締まった状態に保ちつつ、制動やカットインが起きたときには素早く反応できる。ノイズを固定した単一の CV フィルタより優れる点である。
 
@@ -95,8 +99,8 @@ $$\begin{aligned}
 | センサ | ノイズモデル | R の形 |
 |---|---|---|
 | **LiDAR** | $[x, y]$ に対する等方ガウスノイズ $\sigma = 0.15$ m | $\sigma^2 I_2$ |
-| **Radar** | レンジノイズ $\sigma_r = 0.4$ m、横方向ノイズ $\sigma_{lat} = 1.2$ m、LOS 角で回転 | $\operatorname{Rot} \cdot \operatorname{diag}(\sigma_r^2, \sigma_{lat}^2) \cdot \operatorname{Rot}^\top$ |
-| **Camera** | 方位ノイズ $\sigma = 0.6^\circ$、レンジ相対誤差 10 %、LOS で回転 | $\operatorname{Rot} \cdot \operatorname{diag}((r\cdot err)^2, (r\cdot\sigma_b)^2) \cdot \operatorname{Rot}^\top$ |
+| **Radar** | レンジノイズ $\sigma_r = 0.4$ m、横方向ノイズ $\sigma_{lat} = 1.2$ m、LOS 角で回転 | $\mathrm{Rot} \cdot \mathrm{diag}(\sigma_r^2, \sigma_{lat}^2) \cdot \mathrm{Rot}^\top$ |
+| **Camera** | 方位ノイズ $\sigma = 0.6^\circ$、レンジ相対誤差 10 %、LOS で回転 | $\mathrm{Rot} \cdot \mathrm{diag}((r\cdot err)^2, (r\cdot\sigma_b)^2) \cdot \mathrm{Rot}^\top$ |
 
 **設計判断 — Radar / Camera に異方性の R を用いる。** ユークリッド距離によるゲーティングはカメラでは破綻する（レンジ誤差が数メートルに達しうるため）。マハラノビス距離に $(R_i + R_j)$ を用いることで、センサの方向依存な不確かさを正しく重み付けできる。
 
@@ -138,10 +142,12 @@ $$R_{fused} = \left( \sum_i R_i^{-1} \right)^{-1}, \qquad z_{fused} = R_{fused} 
 
 3. **スコアリング。** 受理された候補は次のように評価される。
 
-   $$\begin{aligned}
+```math
+\begin{aligned}
    cost = {} & \text{speed-keeping} + (-\text{progress}) + \text{comfort}(\max v^2\kappa) + \text{lane-change penalty} \\
    & + \text{lane-preference} + 30/\text{min\_clear}
-   \end{aligned}$$
+   \end{aligned}
+```
 
    ソフト項 $30/\text{min\_clear}$ は、余裕が大きい段階では候補をハード棄却することなく、プランナを近接エージェントから遠ざける働きをする。
 

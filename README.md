@@ -150,10 +150,12 @@ through pybind11; `python/` is the user-facing visualisation and scenario layer.
 
 The kinematic bicycle is the prediction and simulation model throughout the stack:
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 &s = [x, y, \psi, v] \qquad u = [a, \delta] \\
 &\dot{x} = v\cos\psi, \quad \dot{y} = v\sin\psi, \quad \dot{\psi} = (v/L)\tan\delta, \quad \dot{v} = a
-\end{aligned}$$
+\end{aligned}
+```
 
 Integrated with **RK4** (not Euler) — critical for the MPC's prediction accuracy
 at $dt = 0.1$ s. Jacobians $A = \partial f/\partial s$, $B = \partial f/\partial u$ of the RK4 step are computed
@@ -237,10 +239,12 @@ For each candidate lane (keep / change left / change right) the planner:
 1. **IDM rollout** — rolls out the ego longitudinally against the predicted
    in-lane lead using the **Intelligent Driver Model**:
 
-   $$\begin{aligned}
+```math
+\begin{aligned}
    s^* &= s_0 + vT + \frac{v\cdot\Delta v}{2\sqrt{a\cdot b}} \\
    a_{IDM} &= a\left[1 - (v/v_{des})^4 - (s^*/gap)^2\right] \quad \text{clipped to } [-1.5b, a]
-   \end{aligned}$$
+   \end{aligned}
+```
 
 2. **Smoothstep lateral** — blends the current lane to the target over $t_{change} = 3$ s.
 
