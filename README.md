@@ -178,9 +178,11 @@ and fast; the reference for trade-off comparison.
 
 Discrete LQR on the linearised 2-state lateral error model $[e_y, e_\psi]$:
 
-$$\dot{e}_y = v\,e_\psi, \quad \dot{e}_\psi = (v/L)\,\delta - v\kappa$$
+```math
+\dot{e}_y = v\,e_\psi, \quad \dot{e}_\psi = (v/L)\,\delta - v\kappa
+```
 
-Gain computed by **backward DARE iteration** until convergence ($\lVert \Delta P \rVert < 1\times10^{-10}$),
+Gain computed by **backward DARE iteration** until convergence ($`\lVert \Delta P \rVert \lt 1\times10^{-10}`$),
 with feedforward $\delta_{ff} = \arctan(L\kappa)$. Verified: cross-track residual after 8 s = $8.6\times10^{-14}$ m.
 
 ### MPC
@@ -189,7 +191,9 @@ Linear time-varying MPC over a 15-step horizon. At each stage the RK4 step is
 linearised around the reference to get $(A_k, B_k, d_k)$, then condensed into a
 strongly-convex box-constrained QP:
 
-$$\min\ E^\top \bar{Q} E + \Delta U^\top \bar{R} \Delta U \quad \text{s.t.}\quad u_{min} \le u_{ref} + \Delta U \le u_{max}$$
+```math
+\min\ E^\top \bar{Q} E + \Delta U^\top \bar{R} \Delta U \quad \text{s.t.}\quad u_{min} \le u_{ref} + \Delta U \le u_{max}
+```
 
 Solved from scratch with **FISTA** (200 iters, step = 1/L_f via power iteration).
 Handles actuator limits $a \in [-6, 3]$ m/s², $\delta \in [-0.6, 0.6]$ rad explicitly.
@@ -208,9 +212,11 @@ Three sensor models, each returning detections with a measurement covariance $R$
 | **Camera** | $\sigma_{bearing} = 0.6$°, range relative error 10 % (rotated) | object class label |
 
 Fusion (**`perception/fusion.hpp`**) groups cross-sensor detections by Mahalanobis distance
-gating ($\chi^2 < 9.21$, 2 DOF, 99 % gate) and combines each cluster in information form:
+gating ($`\chi^2 \lt 9.21`$, 2 DOF, 99 % gate) and combines each cluster in information form:
 
-$$R_{fused} = \left(\sum_i R_i^{-1}\right)^{-1}, \quad z_{fused} = R_{fused} \sum_i R_i^{-1} z_i$$
+```math
+R_{fused} = \left(\sum_i R_i^{-1}\right)^{-1}, \quad z_{fused} = R_{fused} \sum_i R_i^{-1} z_i
+```
 
 This is the maximum-likelihood combination of independent Gaussian measurements.
 Radar Doppler primes the velocity estimate for new tracks.
@@ -264,7 +270,9 @@ every timestep:
 Minimum safe following distance: the gap such that, even if the lead brakes at
 $b_{max}$ while ego accelerates for $\rho$ seconds (reaction time) then brakes at $b_{min}$:
 
-$$d_{RSS} = v_{ego}\,\rho + \tfrac{1}{2} a \rho^2 + \frac{(v_{ego} + \rho a)^2}{2b} - \frac{v_{lead}^2}{2b_{lead}}$$
+```math
+d_{RSS} = v_{ego}\,\rho + \tfrac{1}{2} a \rho^2 + \frac{(v_{ego} + \rho a)^2}{2b} - \frac{v_{lead}^2}{2b_{lead}}
+```
 
 ### 2. Time-to-collision
 
@@ -275,9 +283,11 @@ $TTC = gap / (v_{ego} - v_{lead})$ below a threshold (2.5 s).
 Detects a dangerous cut-in. Per RSS a situation is dangerous only when the lateral
 *and* longitudinal safe distances are violated together, so both must hold:
 
-$$d_{lat}(v_{lat}) = \mu + \ell(0) + \ell(|v_{lat}|), \qquad \ell(v) = v\rho + \tfrac{1}{2}a_{lat}\rho^2 + \frac{(v + \rho a_{lat})^2}{2b_{lat}}$$
+```math
+d_{lat}(v_{lat}) = \mu + \ell(0) + \ell(|v_{lat}|), \qquad \ell(v) = v\rho + \tfrac{1}{2}a_{lat}\rho^2 + \frac{(v + \rho a_{lat})^2}{2b_{lat}}
+```
 
-fires when $|\Delta y| < d_{lat}$ *and* $-L_{veh} \le \Delta x \le d_{RSS} + L_{veh}$.
+fires when $`|\Delta y| \lt d_{lat}`$ *and* $-L_{veh} \le \Delta x \le d_{RSS} + L_{veh}$.
 The lateral distance reaches beyond half a lane width ($3.82$ m at $v_{lat} = 2$ m/s,
 against $\text{LANE}/2 = 1.75$ m) — that is what lets the check fire while the
 neighbour is still in the adjacent lane, rather than after it has become an in-lane
@@ -285,7 +295,7 @@ lead that the longitudinal check would have caught anyway.
 
 Two further conditions gate it — the track's lateral speed must be credible
 ($|v_y| \le 3$ m/s, rejecting sensor ghosts) and it must actually be closing on the
-ego ($\Delta y \cdot v_y < 0$, so a departing neighbour is not braked for). These carry
+ego ($`\Delta y \cdot v_y \lt 0`$, so a departing neighbour is not braked for). These carry
 no safety credit; they exist to protect availability.
 
 When any check fires, the guardrail **latches** for `hold` steps and substitutes

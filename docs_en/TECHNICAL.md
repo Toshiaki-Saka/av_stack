@@ -153,7 +153,9 @@ integration method changes.
 **Verification.** For a typical operating point $(s_0, u_0)$ the linearisation
 residual satisfies:
 
-$$\lVert \Phi(s_0 + \delta s, u_0) - (\Phi(s_0, u_0) + A_k \delta s) \rVert / \lVert \delta s \rVert \approx 2.3 \times 10^{-6} \quad \text{(second-order)}$$
+```math
+\lVert \Phi(s_0 + \delta s, u_0) - (\Phi(s_0, u_0) + A_k \delta s) \rVert / \lVert \delta s \rVert \approx 2.3 \times 10^{-6} \quad \text{(second-order)}
+```
 
 confirming that the Jacobians are correct to the expected $O(\varepsilon^2)$ accuracy of central
 differences.
@@ -190,7 +192,9 @@ iterations when $P$ is still close to $Q$).
 
 Standard three-term controller with integral clamping:
 
-$$u(t) = K_p\, e(t) + K_i \int_0^t e(\tau)\,d\tau + K_d\, \dot{e}(t)$$
+```math
+u(t) = K_p\, e(t) + K_i \int_0^t e(\tau)\,d\tau + K_d\, \dot{e}(t)
+```
 
 Discretised with Euler integration for the integral and a backward difference for
 the derivative. Two saturation levels are applied independently:
@@ -208,7 +212,9 @@ rather than corrected.
 **Problem.** Given the discrete time-invariant linear system $e_{k+1} = A e_k + B u_k$,
 find the state-feedback gain $K$ that minimises the infinite-horizon quadratic cost:
 
-$$J = \sum_{k=0}^{\infty} (e_k^\top Q e_k + u_k^\top R u_k), \quad u_k = -K e_k$$
+```math
+J = \sum_{k=0}^{\infty} (e_k^\top Q e_k + u_k^\top R u_k), \quad u_k = -K e_k
+```
 
 **DARE solution.** The optimal gain satisfies:
 
@@ -230,7 +236,7 @@ P_{n+1} &= Q + A^\top P_n A - A^\top P_n B (R + B^\top P_n B)^{-1} B^\top P_n A
 ```
 
 This converges to the stabilising solution $P^*$ quadratically near the fixed point.
-Convergence criterion: $\lVert P_{n+1} - P_n \rVert_1 < 10^{-10}$ (typically in < 30 iterations for
+Convergence criterion: $`\lVert P_{n+1} - P_n \rVert_1 \lt 10^{-10}`$ (typically in < 30 iterations for
 the 2-state model). `iters = 1000` is a conservative upper bound.
 
 **Lateral path-tracking model.** The LQR is applied to the 2-state lateral error
@@ -266,7 +272,7 @@ track the reference exactly for this constant-speed trajectory.
 
 #### 4.3.1 Problem formulation
 
-Track a reference trajectory $\{(s_{ref,k}, u_{ref,k})\}_{k=0}^{N}$ over a receding
+Track a reference trajectory $`\{(s_{ref,k}, u_{ref,k})\}_{k=0}^{N}`$ over a receding
 horizon $N = 15$ steps ($dt = 0.1$ s, 1.5 s look-ahead) subject to box constraints:
 
 ```math
@@ -288,7 +294,9 @@ At stage $k$, linearise the RK4 step around $(s_{ref,k}, u_{ref,k})$ via central
 finite differences (Section 2.3) to obtain $(A_k, B_k)$. This gives the **linear
 time-varying (LTV)** error dynamics:
 
-$$e_{k+1} = A_k e_k + B_k \Delta u_k + d_k$$
+```math
+e_{k+1} = A_k e_k + B_k \Delta u_k + d_k
+```
 
 The defect $d_k$ absorbs the Taylor remainder and ensures that $e_k = 0$ is
 consistent with $s_k = s_{ref,k}$ for all $k$ — a necessary property for the
@@ -299,7 +307,9 @@ constraint to be correct.
 Define the stacked state vector $E = [e_1^\top, \dots, e_N^\top]^\top \in \mathbb{R}^{Nn}$ and input
 perturbation $\Delta U = [\Delta u_0^\top, \dots, \Delta u_{N-1}^\top]^\top \in \mathbb{R}^{Nm}$. By forward recursion:
 
-$$E = S_x e_0 + S_u \Delta U + \text{offset}$$
+```math
+E = S_x e_0 + S_u \Delta U + \text{offset}
+```
 
 The **condensed sensitivity matrix** $S_u \in \mathbb{R}^{Nn \times Nm}$ has block-lower-triangular
 structure:
@@ -366,7 +376,9 @@ the power estimate guarantees a finite step size.
 
 **Convergence.** For $I = 200$ iterations the optimality gap satisfies:
 
-$$f(x_i) - f(x^*) \le L_f \lVert x_0 - x^* \rVert^2 / (2i^2)$$
+```math
+f(x_i) - f(x^*) \le L_f \lVert x_0 - x^* \rVert^2 / (2i^2)
+```
 
 (Beck & Teboulle Theorem 4.4). In practice, 200 iterations is far more than needed:
 for the horizon and weights used here the iterate changes by less than $10^{-8}$ after
@@ -428,7 +440,7 @@ R_{Camera} &= \mathrm{Rot}(\alpha) \cdot \mathrm{diag}((0.10 r)^2, (r \sigma_b)^
 ```
 
 Parameters: $r_{max} = 70$ m, $\theta_{fov} = 70°$, $p_{miss} = 0.04$. Camera also provides
-the object class label $kind \in \{car, truck, \dots\}$.
+the object class label $`kind \in \{car, truck, \dots\}`$.
 
 ---
 
@@ -486,7 +498,7 @@ v_{prior} &= v_r \cdot [\cos \alpha_{LOS}, \sin \alpha_{LOS}]^\top
 ```
 
 This warm-starts the Kalman filter's velocity state, reducing the cold-start velocity
-error from $O(v_{true})$ to $O(\sigma_{vr} \cdot \text{angular\_error})$.
+error from $O(v_{true})$ to $`O(\sigma_{vr} \cdot \text{angular\_error})`$.
 
 ---
 
@@ -553,7 +565,9 @@ P &\leftarrow (I - K H) \hat{P}
 
 The update also returns the **innovation likelihood** for IMM weighting:
 
-$$L(z \mid \hat{x}, \hat{P}, R) = \mathcal{N}(\nu; 0, S) = \exp(-\tfrac{1}{2} \nu^\top S^{-1} \nu) / (2\pi |S|^{1/2})$$
+```math
+L(z \mid \hat{x}, \hat{P}, R) = \mathcal{N}(\nu; 0, S) = \exp(-\tfrac{1}{2} \nu^\top S^{-1} \nu) / (2\pi |S|^{1/2})
+```
 
 ### 7.2 Interacting Multiple Model (IMM) filter
 
@@ -579,7 +593,9 @@ p_{stay} & 1 - p_{stay} \\
 
 **Step 1 — Interaction (mixing).** Compute the predicted model probabilities:
 
-$$\bar{c}_j = \sum_i \Pi_{ij} \mu_i \quad \text{(normaliser for mode } j\text{'s mixing)}$$
+```math
+\bar{c}_j = \sum_i \Pi_{ij} \mu_i \quad \text{(normaliser for mode } j\text{'s mixing)}
+```
 
 Compute the mixed initial condition for model $j$:
 
@@ -597,7 +613,9 @@ returns likelihood $L_j = L(z \mid \text{model } j)$.
 
 **Step 4 — Model probability update.**
 
-$$\mu_j(\text{new}) = L_j \bar{c}_j / \sum_k L_k \bar{c}_k$$
+```math
+\mu_j(\text{new}) = L_j \bar{c}_j / \sum_k L_k \bar{c}_k
+```
 
 **Step 5 — Fused estimate.**
 
@@ -626,10 +644,10 @@ filter and lifecycle counters (`hits`, `misses`, `confirmed`).
 3. **Update.** Matched tracks run `IMM::update(z, R)`. Unmatched tracks increment `misses`.
 4. **Spawn.** Unmatched detections spawn tentative new tracks; velocity is initialised
    from `v_prior` if available (Radar Doppler), otherwise zero.
-5. **Prune.** Tracks with $misses > max\_miss = 5$ are deleted. Tracks with
-   $hits \ge min\_hits = 3$ are promoted to `confirmed`.
+5. **Prune.** Tracks with $`misses \gt max\_miss = 5`$ are deleted. Tracks with
+   $`hits \ge min\_hits = 3`$ are promoted to `confirmed`.
 
-The **Mahalanobis gate** $d^2 = \nu^\top S^{-1} \nu < \gamma$ prevents false associations beyond
+The **Mahalanobis gate** $`d^2 = \nu^\top S^{-1} \nu \lt \gamma`$ prevents false associations beyond
 the sensor noise level. $\gamma = 9.21$ corresponds to 99% containment under the
 true Gaussian model; the 1% of true detections that fall outside the gate are handled
 by new-track spawning.
@@ -702,7 +720,7 @@ the smoothstep is then used by the controller.
 
 ### 8.4 Multi-lane candidate evaluation
 
-For each candidate lane $y_{target} \in \{0.0, \text{LANE}\}$, a trajectory $(x[k], y[k], v[k])$
+For each candidate lane $`y_{target} \in \{0.0, \text{LANE}\}`$, a trajectory $(x[k], y[k], v[k])$
 is generated and scored. The cost function is:
 
 ```math
@@ -716,10 +734,12 @@ is generated and scored. The cost function is:
 \end{aligned}
 ```
 
-$$w = [1.0, 0.4, 4.0, 6.0, 1.0, 30.0]$$
+```math
+w = [1.0, 0.4, 4.0, 6.0, 1.0, 30.0]
+```
 
 **Safety rejection (hard constraint).** The minimum clearance to any predicted agent
-at any horizon step is computed. If $\text{min\_clear} < \text{safe\_radius} = 4.5$ m, the candidate
+at any horizon step is computed. If $`\text{min\_clear} \lt \text{safe\_radius} = 4.5`$ m, the candidate
 is set to `None` (infeasible). This is the planner's own collision avoidance layer,
 independent of the guardrail.
 
@@ -745,12 +765,14 @@ at speed $v_{lead}$. In the worst case:
 
 The minimum safe following distance (stopping-distance argument) is:
 
-$$d_{RSS}(v_{ego}, v_{lead}) = v_{ego}\, \rho + \tfrac{1}{2} a_{ego}\, \rho^2 + (v_{ego} + \rho a_{ego})^2 / (2 b_{min}) - v_{lead}^2 / (2 b_{lead})$$
+```math
+d_{RSS}(v_{ego}, v_{lead}) = v_{ego}\, \rho + \tfrac{1}{2} a_{ego}\, \rho^2 + (v_{ego} + \rho a_{ego})^2 / (2 b_{min}) - v_{lead}^2 / (2 b_{lead})
+```
 
 clamped to 0. Parameters: $\rho = 0.4$ s, $a_{ego} = 1.0$ m/s², $b_{min} = 4.0$ m/s²,
-$b_{lead} = 8.0$ m/s². If the actual gap $< d_{RSS}$, the guardrail triggers.
+$b_{lead} = 8.0$ m/s². If the actual gap $`\lt d_{RSS}`$, the guardrail triggers.
 
-**Physical interpretation.** $v_{ego}\, \rho + \tfrac{1}{2} a_{ego}\, \rho^2$ is the distance the ego travels
+**Physical interpretation.** $`v_{ego}\, \rho + \tfrac{1}{2} a_{ego}\, \rho^2`$ is the distance the ego travels
 during reaction time while still accelerating. $(v_{ego} + \rho a_{ego})^2 / (2 b_{min})$ is
 the subsequent stopping distance. $v_{lead}^2 / (2 b_{lead})$ is the lead vehicle's
 stopping distance (subtracted because the lead also stops). The formula guarantees
@@ -758,9 +780,11 @@ no collision under the stated worst-case model.
 
 ### 9.2 Time-to-collision (TTC)
 
-$$\text{TTC} = \text{gap} / (v_{ego} - v_{lead}) \quad [\text{if } v_{ego} > v_{lead}]$$
+```math
+\text{TTC} = \text{gap} / (v_{ego} - v_{lead}) \quad [\text{if } v_{ego} > v_{lead}]
+```
 
-Triggers when $\text{TTC} < 2.5$ s. TTC is a complementary check to RSS: it catches close
+Triggers when $`\text{TTC} \lt 2.5`$ s. TTC is a complementary check to RSS: it catches close
 following at matched speeds where the RSS distance is satisfied (no closing velocity)
 but the absolute gap is dangerously small.
 
@@ -771,17 +795,19 @@ are simultaneously violated (Shalev-Shwartz et al., §4). The guardrail checks b
 
 **Lateral RSS distance:**
 
-$$d_{lat}(v_{lat}) = \mu + v_{lat}\, \rho + \tfrac{1}{2} a_{lat\_max}\, \rho^2 + (v_{lat} + \rho a_{lat\_max})^2 / (2 b_{lat\_min})$$
+```math
+d_{lat}(v_{lat}) = \mu + v_{lat}\, \rho + \tfrac{1}{2} a_{lat\_max}\, \rho^2 + (v_{lat} + \rho a_{lat\_max})^2 / (2 b_{lat\_min})
+```
 
-where $\mu = 0.5$ m is a clearance buffer, $a_{lat\_max} = 0.5$ m/s², $b_{lat\_min} = 1.0$ m/s².
+where $\mu = 0.5$ m is a clearance buffer, $`a_{lat\_max} = 0.5`$ m/s², $`b_{lat\_min} = 1.0`$ m/s².
 
 **Cut-in criterion** (all must hold simultaneously):
 
 0. Lateral speed is credible: $|vy_{agent}| \le v_{y,max} = 3$ m/s. $d_{lat}$ grows with
    $vy$, so a ghost track carrying a large $vy$ estimate would inflate it until the gap
    test below passes trivially. No real vehicle merges faster than this.
-1. Agent is approaching laterally: $(y_{agent} - y_{ego}) \cdot vy_{agent} < 0$.
-2. Lateral gap $|y_{agent} - y_{ego}| < d_{lat}(|vy_{agent}|)$.
+1. Agent is approaching laterally: $`(y_{agent} - y_{ego}) \cdot vy_{agent} \lt 0`$.
+2. Lateral gap $`|y_{agent} - y_{ego}| \lt d_{lat}(|vy_{agent}|)`$.
 3. Longitudinal gap within the RSS band: $-L_{veh} \le (x_{agent} - x_{ego}) \le d_{RSS} + L_{veh}$.
 
 Conditions 2 and 3 are the RSS pair: when both hold, the correct RSS response — there
@@ -820,7 +846,7 @@ the planner.
 
 ### 10.1 Occupancy model
 
-Each predicted agent trajectory $\{(x_k, y_k)\}_{k=0}^{K}$ is splatted as an
+Each predicted agent trajectory $`\{(x_k, y_k)\}_{k=0}^{K}`$ is splatted as an
 axis-aligned Gaussian representing the agent's footprint with time-growing uncertainty:
 
 ```math
@@ -838,7 +864,9 @@ increasing uncertainty in predicted agent positions.
 
 Multiple agents are combined by the **probabilistic OR** (union of independent events):
 
-$$P(\text{cell occupied}) = 1 - \prod_i (1 - P_i(\text{cell}))$$
+```math
+P(\text{cell occupied}) = 1 - \prod_i (1 - P_i(\text{cell}))
+```
 
 This is equivalent to treating each agent as independently occupying the cell, which
 is conservative (it overestimates risk when agents are correlated). The probabilistic
@@ -849,12 +877,12 @@ double-counting.
 
 - **Soft cost** (planner): integrate $P(\text{occupied})$ along a candidate trajectory to
   augment the clearance term.
-- **Hard veto** (guardrail): block any planned trajectory where $\max_k P(\text{cell}) > \text{threshold}$.
+- **Hard veto** (guardrail): block any planned trajectory where $`\max_k P(\text{cell}) \gt \text{threshold}`$.
 - **Visualisation** (`run_pipeline.py`): display the map at each timestep.
 
 **Correctness guarantee.** The `test_occupancy` test verifies:
-- Peak occupancy $> 0.8$ within 0.5 s of a confirmed agent.
-- The area of cells with $P > 0.5$ grows from horizon 5 to horizon 30 (uncertainty inflation).
+- Peak occupancy $`\gt 0.8`$ within 0.5 s of a confirmed agent.
+- The area of cells with $`P \gt 0.5`$ grows from horizon 5 to horizon 30 (uncertainty inflation).
 
 ---
 
@@ -867,7 +895,7 @@ the entry-point scripts.
 |---|---|---|
 | Bicycle linearisation residual | $\lVert \Phi(s+\delta s) - (\Phi(s) + A \delta s) \rVert / \lVert \delta s \rVert$ | **$2.3 \times 10^{-6}$** (second-order ✓) |
 | LQR steady-state cross-track | $\lvert e_y \rvert$ at steady state, double-LC | **$8.6 \times 10^{-14}$ m** |
-| MPC speed tracking | $\lvert v - v_{des} \rvert$ at steady state | **$< 10^{-4}$ m/s** |
+| MPC speed tracking | $\lvert v - v_{des} \rvert$ at steady state | **$`\lt 10^{-4}`$ m/s** |
 | MPC max acceleration | $\lvert a \rvert$ during speed-up | **3.00 m/s²** (limit = 3.0 ✓) |
 | MPC max steering | $\lvert \delta \rvert$ during lateral recovery | **0.600 rad** (limit = 0.6 ✓) |
 | IMM tracking position error | mean position RMSE after warm-up (3 s) | **< 0.6 m** |

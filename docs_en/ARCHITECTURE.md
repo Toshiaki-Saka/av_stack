@@ -46,7 +46,7 @@ $state = [x, y, \psi, v]$, $input = [a, \delta]$.
   changes), central finite differences $A(i,j) = (f(s+\varepsilon e_j)-f(s-\varepsilon e_j))/(2\varepsilon)$
   give Jacobians that are *provably consistent* with the nonlinear step.
 - **Verification.** `control_test` checks that the linearisation residual
-  $\lVert step(s_0+\delta s, u_0) - (step(s_0,u_0) + A\,\delta s) \rVert$ is $O(\varepsilon^2)$ (residual $2.3\times10^{-6}$),
+  $`\lVert step(s_0+\delta s, u_0) - (step(s_0,u_0) + A\,\delta s) \rVert`$ is $O(\varepsilon^2)$ (residual $2.3\times10^{-6}$),
   which confirms the Jacobians match the nonlinear step to second order.
 
 ### `cpp/include/control/linalg.hpp` — dense matrix
@@ -92,7 +92,9 @@ $e_k = s_k - s_{ref,k}$: $e_{k+1} = A_k e_k + B_k \Delta u_k + d_k$.
 **Condensing.** Forward-recursing gives $E = S_x e_0 + S_u \Delta U + offset$, so the QP
 is:
 
-$$\min \tfrac{1}{2} \Delta U^\top H \Delta U + g^\top \Delta U \quad \text{s.t.} \quad lo \le \Delta U \le hi, \qquad H = S_u^\top \bar{Q} S_u + \bar{R}$$
+```math
+\min \tfrac{1}{2} \Delta U^\top H \Delta U + g^\top \Delta U \quad \text{s.t.} \quad lo \le \Delta U \le hi, \qquad H = S_u^\top \bar{Q} S_u + \bar{R}
+```
 
 **Design choice — FISTA, not an interior-point solver.** The condensed QP is
 always strongly convex (H is PD) and box-constrained, which is FISTA's ideal
@@ -159,11 +161,13 @@ Mahalanobis distance correctly weights the sensor's directional uncertainty.
 ## 3. Perception / sensor fusion (`cpp/include/perception/fusion.hpp` → `perception_cpp`)
 
 **Clustering.** Greedy association: for each unpaired detection, collect all
-detections within Mahalanobis distance $\sqrt{d^2} < \sqrt{9.21}$ ($\chi^2$ gate, 2 DOF, 99 %).
+detections within Mahalanobis distance $`\sqrt{d^2} \lt \sqrt{9.21}`$ ($\chi^2$ gate, 2 DOF, 99 %).
 
 **Fusion.** Within each cluster, combine in information form:
 
-$$R_{fused} = \left( \sum_i R_i^{-1} \right)^{-1}, \qquad z_{fused} = R_{fused} \cdot \sum_i R_i^{-1} z_i$$
+```math
+R_{fused} = \left( \sum_i R_i^{-1} \right)^{-1}, \qquad z_{fused} = R_{fused} \cdot \sum_i R_i^{-1} z_i
+```
 
 This is the maximum-likelihood estimate assuming independent sensors. The fused
 covariance is always tighter than any individual sensor's.
@@ -233,7 +237,9 @@ and verifiable*, not a complex module that itself requires a monitor.
 
 ### Longitudinal RSS
 
-$$d_{RSS}(v_{ego}, v_{lead}) = v_{ego}\cdot\rho + \tfrac{1}{2}a\cdot\rho^2 + \frac{(v_{ego} + \rho a)^2}{2b} - \frac{v_{lead}^2}{2b_{lead}}$$
+```math
+d_{RSS}(v_{ego}, v_{lead}) = v_{ego}\cdot\rho + \tfrac{1}{2}a\cdot\rho^2 + \frac{(v_{ego} + \rho a)^2}{2b} - \frac{v_{lead}^2}{2b_{lead}}
+```
 
 Parameters: $\rho = 0.4$ s (reaction time), $a = 1.0$ m/s² (ego max accel during $\rho$),
 $b = 4.0$ m/s² (ego min braking), $b_{lead} = 8.0$ m/s² (lead max braking).
@@ -244,14 +250,16 @@ no collision occurs if ego then brakes at its minimum capability.
 
 ### TTC check
 
-$$TTC = gap / (v_{ego} - v_{lead}) \quad \text{if } v_{ego} > v_{lead}$$
+```math
+TTC = gap / (v_{ego} - v_{lead}) \quad \text{if } v_{ego} > v_{lead}
+```
 
-Flags when $TTC < 2.5$ s.
+Flags when $`TTC \lt 2.5`$ s.
 
 ### Lateral RSS
 
 Detects a dangerous cut-in by checking both conditions simultaneously:
-1. Lateral gap $< \mu + \text{travel}(v_{vy,other}) + \text{travel}(v_{vy,ego})$ (lateral RSS distance).
+1. Lateral gap $`\lt \mu + \text{travel}(v_{vy,other}) + \text{travel}(v_{vy,ego})`$ (lateral RSS distance).
 2. Longitudinal gap within the RSS band (same formula as above).
 
 Per the RSS model, a situation is dangerous only when *both* safe distances are
@@ -279,7 +287,9 @@ the agent's centre is a 2-D Gaussian with $\sigma(k) = \sigma_0 + growth\cdot k$
 inflating with prediction horizon), convolved with a $car_l \times car_w$ rectangular
 footprint. Combined across agents:
 
-$$P(\text{cell occupied}) = 1 - \prod_i (1 - P_i(\text{cell})) \quad \text{(probabilistic OR)}$$
+```math
+P(\text{cell occupied}) = 1 - \prod_i (1 - P_i(\text{cell})) \quad \text{(probabilistic OR)}
+```
 
 This gives a smooth, differentiable map that can serve as a soft cost (integrate
 occupancy along the planner's candidate trajectory) or a hard veto (block any

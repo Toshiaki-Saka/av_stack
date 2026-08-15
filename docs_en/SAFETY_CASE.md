@@ -85,8 +85,8 @@ $t = 0.5$ s and $t = 3.5$ s. The cut-in check fires only when **all** of the
 following hold simultaneously (`safety/guardrail.hpp::_cut_in_threat`):
 
 1. The track is confirmed and its lateral speed is credible ($|v_y| \le 3$ m/s).
-2. It is approaching laterally — $\Delta y \cdot v_y < 0$.
-3. The lateral gap is below the RSS lateral safe distance, $|\Delta y| < d_{lat}(v_y)$.
+2. It is approaching laterally — $`\Delta y \cdot v_y \lt 0`$.
+3. The lateral gap is below the RSS lateral safe distance, $`|\Delta y| \lt d_{lat}(v_y)`$.
 4. The longitudinal gap is inside the RSS band, $-L_{veh} \le \Delta x \le d_{RSS} + L_{veh}$.
 
 Conditions 3 and 4 are the RSS pair: per Shalev-Shwartz, a situation is dangerous
@@ -127,7 +127,7 @@ cost is that the ego brakes in a situation the planner would have survived unaid
 **G3.4 detail (planner fault injection).**
 
 `run_pipeline.py` with `fault=True` simulates a degraded planning channel:
-$T = 0.2$ s (tailgating), $b = 1.0$ m/s² (barely braking), $safe\_radius = 0$
+$T = 0.2$ s (tailgating), $b = 1.0$ m/s² (barely braking), $`safe\_radius = 0`$
 (collision avoidance disabled). This is the "primary-channel failure" the
 independent safety layer exists to catch. The guardrail is not notified of the
 fault; it re-derives safety from the world-model tracks and overrides the faulted
