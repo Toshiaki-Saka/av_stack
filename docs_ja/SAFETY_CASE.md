@@ -81,8 +81,8 @@ with guardrail:     safe stop at t ≈ 4.8 s  (gap = +3.1 m at closest approach)
 (`safety/guardrail.hpp::_cut_in_threat`)。
 
 1. トラックが確定済みで、横方向速度が妥当な範囲にあること ($|v_y| \le 3$ m/s)。
-2. 横方向に接近していること — $\Delta y \cdot v_y < 0$。
-3. 横方向ギャップが RSS 横方向安全距離を下回ること — $|\Delta y| < d_{lat}(v_y)$。
+2. 横方向に接近していること — $`\Delta y \cdot v_y \lt 0`$。
+3. 横方向ギャップが RSS 横方向安全距離を下回ること — $`|\Delta y| \lt d_{lat}(v_y)`$。
 4. 縦方向ギャップが RSS の帯域内にあること — $-L_{veh} \le \Delta x \le d_{RSS} + L_{veh}$。
 
 条件 3 と 4 が RSS の対をなす。Shalev-Shwartz に従えば、横方向**かつ**縦方向の安全距離が
@@ -120,7 +120,7 @@ with guardrail:     safe stop at t ≈ 4.8 s  (gap = +3.1 m at closest approach)
 **G3.4 の詳細 (プランナへのフォールトインジェクション)。**
 
 `run_pipeline.py` を `fault=True` で実行すると、劣化した計画チャネルをシミュレートする。
-$T = 0.2$ s (車間詰め)、 $b = 1.0$ m/s² (ほとんど制動しない)、 $safe\_radius = 0$
+$T = 0.2$ s (車間詰め)、 $b = 1.0$ m/s² (ほとんど制動しない)、 $`safe\_radius = 0`$
 (衝突回避を無効化)。これは、独立した安全層が捕捉するために存在する「主チャネルの故障」に
 他ならない。ガードレールはこのフォールトを通知されない。ワールドモデルのトラックから安全性を
 再導出し、ハザード期間を通じて故障プランナの指令を上書きする。

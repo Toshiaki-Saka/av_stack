@@ -179,9 +179,11 @@ pybind11 を通じて公開される。`python/` はユーザに面した可視�
 
 線形化した 2 状態の横偏差モデル $[e_y, e_\psi]$ に対する離散 LQR である。
 
-$$\dot{e}_y = v\,e_\psi, \quad \dot{e}_\psi = (v/L)\,\delta - v\kappa$$
+```math
+\dot{e}_y = v\,e_\psi, \quad \dot{e}_\psi = (v/L)\,\delta - v\kappa
+```
 
-ゲインは収束するまで ($\lVert \Delta P \rVert < 1\times10^{-10}$) の **DARE 後退反復**によって
+ゲインは収束するまで ($`\lVert \Delta P \rVert \lt 1\times10^{-10}`$) の **DARE 後退反復**によって
 計算し、フィードフォワード $\delta_{ff} = \arctan(L\kappa)$ を伴う。検証済み: 8 s 後の横偏差残差 = $8.6\times10^{-14}$ m。
 
 ### MPC
@@ -189,7 +191,9 @@ $$\dot{e}_y = v\,e_\psi, \quad \dot{e}_\psi = (v/L)\,\delta - v\kappa$$
 15 ステップのホライズンにわたる線形時変 MPC である。各ステージで RK4 ステップを参照軌道
 まわりで線形化して $(A_k, B_k, d_k)$ を得たうえで、強凸なボックス制約付き QP へ縮約する。
 
-$$\min\ E^\top \bar{Q} E + \Delta U^\top \bar{R} \Delta U \quad \text{s.t.}\quad u_{min} \le u_{ref} + \Delta U \le u_{max}$$
+```math
+\min\ E^\top \bar{Q} E + \Delta U^\top \bar{R} \Delta U \quad \text{s.t.}\quad u_{min} \le u_{ref} + \Delta U \le u_{max}
+```
 
 これを **FISTA** によりゼロから解く (200 反復、ステップ幅 = べき乗反復による 1/L_f)。
 アクチュエータ制限 $a \in [-6, 3]$ m/s²、 $\delta \in [-0.6, 0.6]$ rad を明示的に扱う。
@@ -208,9 +212,11 @@ $$\min\ E^\top \bar{Q} E + \Delta U^\top \bar{R} \Delta U \quad \text{s.t.}\quad
 | **Camera** | $\sigma_{bearing} = 0.6$°、距離の相対誤差 10 % (回転済み) | 物体クラスラベル |
 
 フュージョン (**`perception/fusion.hpp`**) は、センサ横断の検出をマハラノビス距離ゲーティング
-($\chi^2 < 9.21$、2 自由度、99 % ゲート) によりグループ化し、各クラスタを情報形式で統合する。
+($`\chi^2 \lt 9.21`$、2 自由度、99 % ゲート) によりグループ化し、各クラスタを情報形式で統合する。
 
-$$R_{fused} = \left(\sum_i R_i^{-1}\right)^{-1}, \quad z_{fused} = R_{fused} \sum_i R_i^{-1} z_i$$
+```math
+R_{fused} = \left(\sum_i R_i^{-1}\right)^{-1}, \quad z_{fused} = R_{fused} \sum_i R_i^{-1} z_i
+```
 
 これは独立なガウス観測の最尤結合である。レーダのドップラーは、新規トラックの速度推定に
 初期値を与える。
@@ -262,7 +268,9 @@ $$R_{fused} = \left(\sum_i R_i^{-1}\right)^{-1}, \quad z_{fused} = R_{fused} \su
 最小安全車間距離。すなわち、先行車が $b_{max}$ でブレーキする一方、自車が $\rho$ 秒 (反応時間)
 のあいだ加速し、その後 $b_{min}$ でブレーキしたとしても安全であるような車間である。
 
-$$d_{RSS} = v_{ego}\,\rho + \tfrac{1}{2} a \rho^2 + \frac{(v_{ego} + \rho a)^2}{2b} - \frac{v_{lead}^2}{2b_{lead}}$$
+```math
+d_{RSS} = v_{ego}\,\rho + \tfrac{1}{2} a \rho^2 + \frac{(v_{ego} + \rho a)^2}{2b} - \frac{v_{lead}^2}{2b_{lead}}
+```
 
 ### 2. 衝突余裕時間 (Time-to-collision)
 
@@ -273,9 +281,11 @@ $TTC = gap / (v_{ego} - v_{lead})$ がしきい値 (2.5 s) を下回ること。
 危険なカットインを検出する。RSS に従えば、状況が危険となるのは横方向*かつ*縦方向の安全
 距離が同時に侵害されたときのみであり、したがって両者がともに成立しなければならない。
 
-$$d_{lat}(v_{lat}) = \mu + \ell(0) + \ell(|v_{lat}|), \qquad \ell(v) = v\rho + \tfrac{1}{2}a_{lat}\rho^2 + \frac{(v + \rho a_{lat})^2}{2b_{lat}}$$
+```math
+d_{lat}(v_{lat}) = \mu + \ell(0) + \ell(|v_{lat}|), \qquad \ell(v) = v\rho + \tfrac{1}{2}a_{lat}\rho^2 + \frac{(v + \rho a_{lat})^2}{2b_{lat}}
+```
 
-発火するのは $|\Delta y| < d_{lat}$ *かつ* $-L_{veh} \le \Delta x \le d_{RSS} + L_{veh}$ のときである。
+発火するのは $`|\Delta y| \lt d_{lat}`$ *かつ* $-L_{veh} \le \Delta x \le d_{RSS} + L_{veh}$ のときである。
 横方向距離は車線幅の半分を超えて届く ($v_{lat} = 2$ m/s において $3.82$ m、対する
 $\text{LANE}/2 = 1.75$ m)。これこそが、隣接車がまだ隣の車線にいるうちにこのチェックを発火
 させるものであり、隣接車が同一車線の先行車となってしまい結局は縦方向チェックが捉えたで
@@ -283,7 +293,7 @@ $\text{LANE}/2 = 1.75$ m)。これこそが、隣接車がまだ隣の車線に�
 
 さらに 2 つの条件がこれをゲートする。トラックの横方向速度が信頼できること
 ($|v_y| \le 3$ m/s、センサのゴーストを棄却する)、および実際に自車へ接近していること
-($\Delta y \cdot v_y < 0$、したがって遠ざかっていく隣接車のためにブレーキはしない) である。
+($`\Delta y \cdot v_y \lt 0`$、したがって遠ざかっていく隣接車のためにブレーキはしない) である。
 これらは安全上のクレジットを持たない。可用性を守るために存在する。
 
 いずれかのチェックが発火すると、ガードレールは `hold` ステップのあいだ**ラッチ**し、
