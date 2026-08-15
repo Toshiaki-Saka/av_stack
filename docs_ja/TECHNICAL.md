@@ -147,7 +147,9 @@ $e_{k+1} \approx A_k e_k + B_k \Delta u_k + d_k$ にモデル化ミスマッチ�
 
 **検証。** 典型的な動作点 $(s_0, u_0)$ において、線形化残差は次を満たす。
 
-$$\lVert \Phi(s_0 + \delta s, u_0) - (\Phi(s_0, u_0) + A_k \delta s) \rVert / \lVert \delta s \rVert \approx 2.3 \times 10^{-6} \quad \text{(second-order)}$$
+```math
+\lVert \Phi(s_0 + \delta s, u_0) - (\Phi(s_0, u_0) + A_k \delta s) \rVert / \lVert \delta s \rVert \approx 2.3 \times 10^{-6} \quad \text{(second-order)}
+```
 
 これは、ヤコビアンが中心差分に期待される $O(\varepsilon^2)$ の精度で正しいことを確認するものである。
 
@@ -182,7 +184,9 @@ $N \cdot m = 30$) だからである。
 
 積分項クランプを備えた標準的な三項制御器である。
 
-$$u(t) = K_p\, e(t) + K_i \int_0^t e(\tau)\,d\tau + K_d\, \dot{e}(t)$$
+```math
+u(t) = K_p\, e(t) + K_i \int_0^t e(\tau)\,d\tau + K_d\, \dot{e}(t)
+```
 
 積分項は Euler 積分、微分項は後退差分で離散化する。飽和は 2 段階を独立に適用する。
 
@@ -198,7 +202,9 @@ $$u(t) = K_p\, e(t) + K_i \int_0^t e(\tau)\,d\tau + K_d\, \dot{e}(t)$$
 **問題設定。** 離散時不変線形システム $e_{k+1} = A e_k + B u_k$ に対し、無限ホライズン二次コストを
 最小化する状態フィードバックゲイン $K$ を求める。
 
-$$J = \sum_{k=0}^{\infty} (e_k^\top Q e_k + u_k^\top R u_k), \quad u_k = -K e_k$$
+```math
+J = \sum_{k=0}^{\infty} (e_k^\top Q e_k + u_k^\top R u_k), \quad u_k = -K e_k
+```
 
 **DARE による解。** 最適ゲインは次を満たす。
 
@@ -220,7 +226,7 @@ P_{n+1} &= Q + A^\top P_n A - A^\top P_n B (R + B^\top P_n B)^{-1} B^\top P_n A
 ```
 
 これは不動点近傍で安定化解 $P^*$ に二次収束する。収束判定は
-$\lVert P_{n+1} - P_n \rVert_1 < 10^{-10}$ (2 状態モデルでは通常 30 反復未満) であり、
+$`\lVert P_{n+1} - P_n \rVert_1 \lt 10^{-10}`$ (2 状態モデルでは通常 30 反復未満) であり、
 `iters = 1000` は保守的な上限値である。
 
 **横方向経路追従モデル。** LQR は 2 状態の横方向誤差モデル $e = [e_y, e_\psi]^\top$ に適用する。
@@ -254,7 +260,7 @@ R = [r_\delta]
 
 #### 4.3.1 問題定式化
 
-参照軌道 $\{(s_{ref,k}, u_{ref,k})\}_{k=0}^{N}$ を、後退ホライズン $N = 15$ ステップ
+参照軌道 $`\{(s_{ref,k}, u_{ref,k})\}_{k=0}^{N}`$ を、後退ホライズン $N = 15$ ステップ
 ($dt = 0.1$ s、1.5 s 先読み) にわたり、ボックス制約のもとで追従する。
 
 ```math
@@ -276,7 +282,9 @@ $d_k = \Phi(s_{ref,k}, u_{ref,k}) - s_{ref,k+1}$ は非線形参照軌道から�
 ステージ $k$ において、RK4 ステップを $(s_{ref,k}, u_{ref,k})$ のまわりで中心差分 (2.3 節) により
 線形化し、 $(A_k, B_k)$ を得る。これにより**線形時変 (LTV)** 誤差ダイナミクスが得られる。
 
-$$e_{k+1} = A_k e_k + B_k \Delta u_k + d_k$$
+```math
+e_{k+1} = A_k e_k + B_k \Delta u_k + d_k
+```
 
 defect $d_k$ は Taylor 展開の剰余項を吸収し、すべての $k$ について $e_k = 0$ が
 $s_k = s_{ref,k}$ と整合することを保証する。これは制約が正しく機能するために必要な性質である。
@@ -287,7 +295,9 @@ $s_k = s_{ref,k}$ と整合することを保証する。これは制約が正�
 $\Delta U = [\Delta u_0^\top, \dots, \Delta u_{N-1}^\top]^\top \in \mathbb{R}^{Nm}$ を定義する。
 前向き再帰により:
 
-$$E = S_x e_0 + S_u \Delta U + \text{offset}$$
+```math
+E = S_x e_0 + S_u \Delta U + \text{offset}
+```
 
 **凝縮感度行列** $S_u \in \mathbb{R}^{Nn \times Nm}$ は下三角ブロック構造をもつ。
 
@@ -351,7 +361,9 @@ w_{k+1} &= H v_k / \lVert H v_k \rVert, \quad \lambda \approx \lVert H v_k \rVer
 
 **収束性。** $I = 200$ 反復に対し、最適性ギャップは次を満たす。
 
-$$f(x_i) - f(x^*) \le L_f \lVert x_0 - x^* \rVert^2 / (2i^2)$$
+```math
+f(x_i) - f(x^*) \le L_f \lVert x_0 - x^* \rVert^2 / (2i^2)
+```
 
 (Beck & Teboulle 定理 4.4)。実際には 200 反復は必要量をはるかに上回っており、ここで用いる
 ホライズンと重みでは、約 40 反復以降、反復解の変化量は $10^{-8}$ を下回る。
@@ -412,7 +424,7 @@ R_{Camera} &= \mathrm{Rot}(\alpha) \cdot \mathrm{diag}((0.10 r)^2, (r \sigma_b)^
 ```
 
 パラメータ: $r_{max} = 70$ m、 $\theta_{fov} = 70°$、 $p_{miss} = 0.04$。Camera は物体のクラス
-ラベル $kind \in \{car, truck, \dots\}$ も提供する。
+ラベル $`kind \in \{car, truck, \dots\}`$ も提供する。
 
 ---
 
@@ -466,7 +478,7 @@ v_{prior} &= v_r \cdot [\cos \alpha_{LOS}, \sin \alpha_{LOS}]^\top
 ```
 
 これによりカルマンフィルタの速度状態がウォームスタートされ、コールドスタート時の速度誤差が
-$O(v_{true})$ から $O(\sigma_{vr} \cdot \text{angular\_error})$ へ低減される。
+$O(v_{true})$ から $`O(\sigma_{vr} \cdot \text{angular\_error})`$ へ低減される。
 
 ---
 
@@ -533,7 +545,9 @@ P &\leftarrow (I - K H) \hat{P}
 
 更新処理は、IMM の重み付けに用いる**イノベーション尤度**も返す。
 
-$$L(z \mid \hat{x}, \hat{P}, R) = \mathcal{N}(\nu; 0, S) = \exp(-\tfrac{1}{2} \nu^\top S^{-1} \nu) / (2\pi |S|^{1/2})$$
+```math
+L(z \mid \hat{x}, \hat{P}, R) = \mathcal{N}(\nu; 0, S) = \exp(-\tfrac{1}{2} \nu^\top S^{-1} \nu) / (2\pi |S|^{1/2})
+```
 
 ### 7.2 Interacting Multiple Model (IMM) フィルタ
 
@@ -558,7 +572,9 @@ p_{stay} & 1 - p_{stay} \\
 
 **ステップ 1 — 相互作用 (混合)。** 予測モデル確率を計算する。
 
-$$\bar{c}_j = \sum_i \Pi_{ij} \mu_i \quad \text{(normaliser for mode } j\text{'s mixing)}$$
+```math
+\bar{c}_j = \sum_i \Pi_{ij} \mu_i \quad \text{(normaliser for mode } j\text{'s mixing)}
+```
 
 モデル $j$ に対する混合初期条件を計算する。
 
@@ -576,7 +592,9 @@ $L_j = L(z \mid \text{model } j)$ を返す。
 
 **ステップ 4 — モデル確率の更新。**
 
-$$\mu_j(\text{new}) = L_j \bar{c}_j / \sum_k L_k \bar{c}_k$$
+```math
+\mu_j(\text{new}) = L_j \bar{c}_j / \sum_k L_k \bar{c}_k
+```
 
 **ステップ 5 — 融合推定。**
 
@@ -606,10 +624,10 @@ $\mu_1$ の高いエージェントへの接近をより強く罰する)。
    `misses` をインクリメントする。
 4. **生成。** マッチしなかった検出は暫定トラックを生成する。速度は `v_prior` が利用可能なら
    (Radar のドップラーから) それで初期化し、なければゼロとする。
-5. **削除・確定。** $misses > max\_miss = 5$ のトラックは削除する。 $hits \ge min\_hits = 3$ の
+5. **削除・確定。** $`misses \gt max\_miss = 5`$ のトラックは削除する。 $`hits \ge min\_hits = 3`$ の
    トラックは `confirmed` に昇格させる。
 
-**マハラノビス・ゲート** $d^2 = \nu^\top S^{-1} \nu < \gamma$ は、センサノイズ水準を超えた誤対応を
+**マハラノビス・ゲート** $`d^2 = \nu^\top S^{-1} \nu \lt \gamma`$ は、センサノイズ水準を超えた誤対応を
 防止する。 $\gamma = 9.21$ は、真のガウスモデルのもとで 99% の包含率に対応する。ゲート外に落ちる
 1% の真の検出については、新規トラック生成によって処理される。
 
@@ -677,7 +695,7 @@ $t_{change} = 3.0$ s はレーンチェンジ所要時間である。smoothstep 
 
 ### 8.4 マルチレーン候補評価
 
-各候補レーン $y_{target} \in \{0.0, \text{LANE}\}$ について、軌道 $(x[k], y[k], v[k])$ を生成し
+各候補レーン $`y_{target} \in \{0.0, \text{LANE}\}`$ について、軌道 $(x[k], y[k], v[k])$ を生成し
 スコアリングする。コスト関数は次のとおりである。
 
 ```math
@@ -691,10 +709,12 @@ $t_{change} = 3.0$ s はレーンチェンジ所要時間である。smoothstep 
 \end{aligned}
 ```
 
-$$w = [1.0, 0.4, 4.0, 6.0, 1.0, 30.0]$$
+```math
+w = [1.0, 0.4, 4.0, 6.0, 1.0, 30.0]
+```
 
 **安全棄却 (ハード制約)。** ホライズン内の任意のステップにおける、任意の予測エージェントに対する
-最小クリアランスを計算する。 $\text{min\_clear} < \text{safe\_radius} = 4.5$ m の場合、その候補は
+最小クリアランスを計算する。 $`\text{min\_clear} \lt \text{safe\_radius} = 4.5`$ m の場合、その候補は
 `None` (実行不可能) とする。これはガードレールとは独立した、プランナ自身の衝突回避レイヤである。
 
 **緊急フォールバック。** すべての候補が実行不可能な場合、プランナは現在レーンで $1.5b$ で減速する
@@ -717,21 +737,25 @@ $$w = [1.0, 0.4, 4.0, 6.0, 1.0, 30.0]$$
 
 このとき最小安全車間距離 (停止距離に基づく議論) は次で与えられる。
 
-$$d_{RSS}(v_{ego}, v_{lead}) = v_{ego}\, \rho + \tfrac{1}{2} a_{ego}\, \rho^2 + (v_{ego} + \rho a_{ego})^2 / (2 b_{min}) - v_{lead}^2 / (2 b_{lead})$$
+```math
+d_{RSS}(v_{ego}, v_{lead}) = v_{ego}\, \rho + \tfrac{1}{2} a_{ego}\, \rho^2 + (v_{ego} + \rho a_{ego})^2 / (2 b_{min}) - v_{lead}^2 / (2 b_{lead})
+```
 
 ただし 0 でクランプする。パラメータ: $\rho = 0.4$ s、 $a_{ego} = 1.0$ m/s²、 $b_{min} = 4.0$ m/s²、
 $b_{lead} = 8.0$ m/s²。実際のギャップが $d_{RSS}$ を下回るとガードレールが発火する。
 
-**物理的解釈。** $v_{ego}\, \rho + \tfrac{1}{2} a_{ego}\, \rho^2$ は、自車が反応時間中に加速し
+**物理的解釈。** $`v_{ego}\, \rho + \tfrac{1}{2} a_{ego}\, \rho^2`$ は、自車が反応時間中に加速し
 続けながら進む距離である。 $(v_{ego} + \rho a_{ego})^2 / (2 b_{min})$ はその後の停止距離である。
 $v_{lead}^2 / (2 b_{lead})$ は先行車の停止距離である (先行車も停止するため減算される)。この式は、
 上記の最悪ケースモデルのもとで衝突が起きないことを保証する。
 
 ### 9.2 衝突余裕時間 (TTC)
 
-$$\text{TTC} = \text{gap} / (v_{ego} - v_{lead}) \quad [\text{if } v_{ego} > v_{lead}]$$
+```math
+\text{TTC} = \text{gap} / (v_{ego} - v_{lead}) \quad [\text{if } v_{ego} > v_{lead}]
+```
 
-$\text{TTC} < 2.5$ s で発火する。TTC は RSS を補完するチェックである。速度が一致した状態での
+$`\text{TTC} \lt 2.5`$ s で発火する。TTC は RSS を補完するチェックである。速度が一致した状態での
 過度な接近追従、すなわち (接近速度がゼロのため) RSS 距離条件は満たされているが絶対的なギャップが
 危険なほど小さいケースを捕捉する。
 
@@ -742,18 +766,20 @@ $\text{TTC} < 2.5$ s で発火する。TTC は RSS を補完するチェック�
 
 **横方向 RSS 距離:**
 
-$$d_{lat}(v_{lat}) = \mu + v_{lat}\, \rho + \tfrac{1}{2} a_{lat\_max}\, \rho^2 + (v_{lat} + \rho a_{lat\_max})^2 / (2 b_{lat\_min})$$
+```math
+d_{lat}(v_{lat}) = \mu + v_{lat}\, \rho + \tfrac{1}{2} a_{lat\_max}\, \rho^2 + (v_{lat} + \rho a_{lat\_max})^2 / (2 b_{lat\_min})
+```
 
-ここで $\mu = 0.5$ m はクリアランスバッファ、 $a_{lat\_max} = 0.5$ m/s²、
-$b_{lat\_min} = 1.0$ m/s² である。
+ここで $\mu = 0.5$ m はクリアランスバッファ、 $`a_{lat\_max} = 0.5`$ m/s²、
+$`b_{lat\_min} = 1.0`$ m/s² である。
 
 **カットイン判定条件** (すべてが同時に成立する必要がある):
 
 0. 横方向速度が妥当であること: $|vy_{agent}| \le v_{y,max} = 3$ m/s。 $d_{lat}$ は $vy$ に対して
    単調増加するため、大きな $vy$ 推定値を持つゴーストトラックは $d_{lat}$ を膨張させ、下記の
    ギャップ判定を自明に成立させてしまう。実在の車両がこれを超える速さで割り込むことはない。
-1. エージェントが横方向に接近している: $(y_{agent} - y_{ego}) \cdot vy_{agent} < 0$。
-2. 横方向ギャップが $|y_{agent} - y_{ego}| < d_{lat}(|vy_{agent}|)$。
+1. エージェントが横方向に接近している: $`(y_{agent} - y_{ego}) \cdot vy_{agent} \lt 0`$。
+2. 横方向ギャップが $`|y_{agent} - y_{ego}| \lt d_{lat}(|vy_{agent}|)`$。
 3. 縦方向ギャップが RSS 帯域内: $-L_{veh} \le (x_{agent} - x_{ego}) \le d_{RSS} + L_{veh}$。
 
 条件 2 と 3 が RSS の対をなす。両者が同時に成立するとき、正しい RSS 応答は — 安全な横方向
@@ -791,7 +817,7 @@ $b_{emergency} \cdot 0.8 \approx 4.8$ m/s だけ減速しており、通常は�
 
 ### 10.1 占有モデル
 
-予測された各エージェント軌道 $\{(x_k, y_k)\}_{k=0}^{K}$ は、時間とともに不確かさが増大する
+予測された各エージェント軌道 $`\{(x_k, y_k)\}_{k=0}^{K}`$ は、時間とともに不確かさが増大する
 エージェントのフットプリントを表す、軸平行ガウス分布としてスプラット (splat) される。
 
 ```math
@@ -809,7 +835,9 @@ P_i(\text{cell} \mid \text{horizon } k) &= \exp\!\big[-\tfrac{1}{2} \big( (X - x
 
 複数エージェントは**確率的 OR** (独立事象の和事象) により統合する。
 
-$$P(\text{cell occupied}) = 1 - \prod_i (1 - P_i(\text{cell}))$$
+```math
+P(\text{cell occupied}) = 1 - \prod_i (1 - P_i(\text{cell}))
+```
 
 これは各エージェントが独立にセルを占有すると扱うことに相当し、保守的である (エージェント間に
 相関がある場合はリスクを過大評価する)。確率的 OR により、複数エージェントが占有する領域で
@@ -819,13 +847,13 @@ $$P(\text{cell occupied}) = 1 - \prod_i (1 - P_i(\text{cell}))$$
 
 - **ソフトコスト** (プランナ): 候補軌道に沿って $P(\text{occupied})$ を積分し、クリアランス項を
   補強する。
-- **ハード拒否** (ガードレール): $\max_k P(\text{cell}) > \text{threshold}$ となる計画軌道を
+- **ハード拒否** (ガードレール): $`\max_k P(\text{cell}) \gt \text{threshold}`$ となる計画軌道を
   ブロックする。
 - **可視化** (`run_pipeline.py`): 各タイムステップでマップを表示する。
 
 **正しさの保証。** `test_occupancy` テストは以下を検証する。
-- 確定エージェントに対し、0.5 s 以内でピーク占有確率 $> 0.8$ となること。
-- $P > 0.5$ となるセルの面積が、ホライズン 5 からホライズン 30 にかけて増大すること
+- 確定エージェントに対し、0.5 s 以内でピーク占有確率 $`\gt 0.8`$ となること。
+- $`P \gt 0.5`$ となるセルの面積が、ホライズン 5 からホライズン 30 にかけて増大すること
   (不確かさインフレーション)。
 
 ---
@@ -839,7 +867,7 @@ $$P(\text{cell occupied}) = 1 - \prod_i (1 - P_i(\text{cell}))$$
 |---|---|---|
 | 自転車モデル線形化残差 | $\lVert \Phi(s+\delta s) - (\Phi(s) + A \delta s) \rVert / \lVert \delta s \rVert$ | **$2.3 \times 10^{-6}$** (2 次精度 ✓) |
 | LQR 定常横偏差 | ダブルレーンチェンジ定常時の $\lvert e_y \rvert$ | **$8.6 \times 10^{-14}$ m** |
-| MPC 速度追従 | 定常時の $\lvert v - v_{des} \rvert$ | **$< 10^{-4}$ m/s** |
+| MPC 速度追従 | 定常時の $\lvert v - v_{des} \rvert$ | **$`\lt 10^{-4}`$ m/s** |
 | MPC 最大加速度 | 加速中の $\lvert a \rvert$ | **3.00 m/s²** (制限値 = 3.0 ✓) |
 | MPC 最大操舵角 | 横方向復帰中の $\lvert \delta \rvert$ | **0.600 rad** (制限値 = 0.6 ✓) |
 | IMM 追跡位置誤差 | ウォームアップ (3 s) 後の平均位置 RMSE | **< 0.6 m** |

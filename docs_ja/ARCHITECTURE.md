@@ -32,7 +32,7 @@
 
 - **設計判断 — Euler ではなく RK4。** $dt = 0.1 s$ かつ高速道路速度域では、Euler 積分は 1 秒あたり約 0.5 m/s の誤差を蓄積する。RK4 ではこれが無視できる水準まで低下する。MPC の予測精度はこの点に直接依存する。
 - **設計判断 — 有限差分によるヤコビアン。** RK4 の連鎖律を解析的に導出する方法（誤りやすく、ステップを変更するたびに再導出が必要）ではなく、中心差分 $A(i,j) = (f(s+\varepsilon e_j)-f(s-\varepsilon e_j))/(2\varepsilon)$ を用いる。これにより、非線形ステップと *証明可能な意味で整合する* ヤコビアンが得られる。
-- **検証。** `control_test` は線形化残差 $\lVert step(s_0+\delta s, u_0) - (step(s_0,u_0) + A\,\delta s) \rVert$ が $O(\varepsilon^2)$ であること（残差 $2.3\times10^{-6}$）を確認する。これはヤコビアンが非線形ステップと 2 次の精度で一致していることを裏づける。
+- **検証。** `control_test` は線形化残差 $`\lVert step(s_0+\delta s, u_0) - (step(s_0,u_0) + A\,\delta s) \rVert`$ が $O(\varepsilon^2)$ であること（残差 $2.3\times10^{-6}$）を確認する。これはヤコビアンが非線形ステップと 2 次の精度で一致していることを裏づける。
 
 ### `cpp/include/control/linalg.hpp` — 密行列
 
@@ -63,7 +63,9 @@ K &= (R + B^\top P B)^{-1} B^\top P A
 
 **コンデンシング。** 前向きに再帰することで $E = S_x e_0 + S_u \Delta U + offset$ が得られ、QP は次の形になる。
 
-$$\min \tfrac{1}{2} \Delta U^\top H \Delta U + g^\top \Delta U \quad \text{s.t.} \quad lo \le \Delta U \le hi, \qquad H = S_u^\top \bar{Q} S_u + \bar{R}$$
+```math
+\min \tfrac{1}{2} \Delta U^\top H \Delta U + g^\top \Delta U \quad \text{s.t.} \quad lo \le \Delta U \le hi, \qquad H = S_u^\top \bar{Q} S_u + \bar{R}
+```
 
 **設計判断 — 内点法ではなく FISTA。** コンデンシング後の QP は常に強凸（H は正定）で、かつボックス制約のみである。これは FISTA にとって理想的なケースであり、射影が閉形式で求まり、1 反復あたり $O(N_m N_n)$、LP ソルバへの依存もない。Lipschitz 定数は H に対する 60 ステップの **べき乗反復** で推定する。ここで用いるホライズンと重みに対しては、200 回の FISTA 反復で確実に収束する。
 
@@ -108,11 +110,13 @@ $$\min \tfrac{1}{2} \Delta U^\top H \Delta U + g^\top \Delta U \quad \text{s.t.}
 
 ## 3. パーセプション / センサフュージョン (`cpp/include/perception/fusion.hpp` → `perception_cpp`)
 
-**クラスタリング。** 貪欲法によるアソシエーションである。未対応の検出それぞれについて、マハラノビス距離 $\sqrt{d^2} < \sqrt{9.21}$（$`\chi^2`$ ゲート、自由度 2、99 %）以内にある検出をすべて集める。
+**クラスタリング。** 貪欲法によるアソシエーションである。未対応の検出それぞれについて、マハラノビス距離 $`\sqrt{d^2} \lt \sqrt{9.21}`$（$`\chi^2`$ ゲート、自由度 2、99 %）以内にある検出をすべて集める。
 
 **フュージョン。** 各クラスタ内で、情報形式により統合する。
 
-$$R_{fused} = \left( \sum_i R_i^{-1} \right)^{-1}, \qquad z_{fused} = R_{fused} \cdot \sum_i R_i^{-1} z_i$$
+```math
+R_{fused} = \left( \sum_i R_i^{-1} \right)^{-1}, \qquad z_{fused} = R_{fused} \cdot \sum_i R_i^{-1} z_i
+```
 
 これはセンサ間の独立性を仮定した最尤推定である。統合後の共分散は、常に個々のセンサ単独の共分散より締まったものになる。
 
@@ -149,7 +153,7 @@ $$R_{fused} = \left( \sum_i R_i^{-1} \right)^{-1}, \qquad z_{fused} = R_{fused} 
    \end{aligned}
 ```
 
-   ソフト項 $30/\text{min\_clear}$ は、余裕が大きい段階では候補をハード棄却することなく、プランナを近接エージェントから遠ざける働きをする。
+   ソフト項 $`30/\text{min\_clear}`$ は、余裕が大きい段階では候補をハード棄却することなく、プランナを近接エージェントから遠ざける働きをする。
 
 4. **フォールバック。** すべての候補が棄却された場合、プランナは現在レーンで `1.5b` の減速を行い、`EMERGENCY_SLOW` を返す。実際の制動はその後ガードレールが引き継ぐ。
 
@@ -163,7 +167,9 @@ $$R_{fused} = \left( \sum_i R_i^{-1} \right)^{-1}, \qquad z_{fused} = R_{fused} 
 
 ### 縦方向 RSS
 
-$$d_{RSS}(v_{ego}, v_{lead}) = v_{ego}\cdot\rho + \tfrac{1}{2}a\cdot\rho^2 + \frac{(v_{ego} + \rho a)^2}{2b} - \frac{v_{lead}^2}{2b_{lead}}$$
+```math
+d_{RSS}(v_{ego}, v_{lead}) = v_{ego}\cdot\rho + \tfrac{1}{2}a\cdot\rho^2 + \frac{(v_{ego} + \rho a)^2}{2b} - \frac{v_{lead}^2}{2b_{lead}}
+```
 
 パラメータ: $\rho = 0.4$ s（反応時間）、 $a = 1.0$ m/s²（$`\rho`$ の間の自車最大加速度）、 $b = 4.0$ m/s²（自車の最小制動能力）、 $b_{lead} = 8.0$ m/s²（先行車の最大制動）。
 
@@ -171,14 +177,16 @@ $$d_{RSS}(v_{ego}, v_{lead}) = v_{ego}\cdot\rho + \tfrac{1}{2}a\cdot\rho^2 + \fr
 
 ### TTC チェック
 
-$$TTC = gap / (v_{ego} - v_{lead}) \quad \text{if } v_{ego} > v_{lead}$$
+```math
+TTC = gap / (v_{ego} - v_{lead}) \quad \text{if } v_{ego} > v_{lead}
+```
 
-$TTC < 2.5$ s のときにフラグを立てる。
+$`TTC \lt 2.5`$ s のときにフラグを立てる。
 
 ### 横方向 RSS
 
 危険なカットインを、次の 2 条件が同時に成立するかどうかで検出する。
-1. 横方向のギャップ $< \mu + \text{travel}(v_{vy,other}) + \text{travel}(v_{vy,ego})$（横方向 RSS 距離）。
+1. 横方向のギャップ $`\lt \mu + \text{travel}(v_{vy,other}) + \text{travel}(v_{vy,ego})`$（横方向 RSS 距離）。
 2. 縦方向のギャップが RSS のバンド内にある（上記と同じ式）。
 
 RSS モデルによれば、状況が危険と判定されるのは *両方の* 安全距離が侵害されたときのみである。そして（安全な横方向の回避が取れない場合の）正しい応答は、縦方向に制動することである。
@@ -197,7 +205,9 @@ RSS モデルによれば、状況が危険と判定されるのは *両方の* 
 
 予測された各エージェントの軌道は、**車両フットプリント形状のガウス分布** としてスプラットされる。すなわち、エージェント中心の 2 次元ガウス分布（$`\sigma(k) = \sigma_0 + growth\cdot k`$、予測ホライズンとともに不確かさが膨らむ）を、 $car_l \times car_w$ の矩形フットプリントで畳み込む。エージェント間では次のように統合する。
 
-$$P(\text{cell occupied}) = 1 - \prod_i (1 - P_i(\text{cell})) \quad \text{(probabilistic OR)}$$
+```math
+P(\text{cell occupied}) = 1 - \prod_i (1 - P_i(\text{cell})) \quad \text{(probabilistic OR)}
+```
 
 これにより、滑らかで微分可能なマップが得られる。プランナの候補軌道に沿ってオキュパンシーを積分すればソフトコストとして使えるし、しきい値を超えるセルを通過する軌道をブロックすればハードな拒否条件としても使える。
 
