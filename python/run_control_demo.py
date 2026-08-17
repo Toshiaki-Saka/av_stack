@@ -13,7 +13,7 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "build"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "build", "Release"))
 import control_cpp as C  # noqa: E402
-from path import Path     # noqa: E402
+from planning_cpp import Path  # noqa: E402
 
 DT, L = 0.1, 2.7
 A_MAX, DELTA_MAX = 3.0, 0.6

@@ -41,4 +41,4 @@ distinction is load-bearing.
 - ASIL decomposition and independence analysis have not been performed
 - Trigger conditions for SG2 (occlusion, sensor dropout) are not bounded (SOTIF issue)
 - REQ-SAF-04 is stated as a rate but is verified only by directed cases (a departing neighbour and a ghost track must not trigger a brake). No false-positive rate over a scenario population has been measured, so the $`\lt 1`$% figure is a target, not evidence.
-- The guardrail is implemented twice (`safety/guardrail.hpp` and `python/guardrail.py`) and the two have drifted before; see residual R3 in [`SAFETY_CASE.md`](SAFETY_CASE.md)
+- The guardrail used to be implemented twice (`safety/guardrail.hpp` and `python/guardrail.py`) and the two drifted twice before the Python copy was deleted; the history is kept as residual R3 in [`SAFETY_CASE.md`](SAFETY_CASE.md)

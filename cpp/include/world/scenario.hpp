@@ -50,10 +50,15 @@ struct Agent {
         if (has_cut_in && cut_in.t_start <= t && t <= cut_in.t_end)
             vy_des = 2.0 * std::tanh((cut_in.y_target - y) * 0.8);
 
-        x  += vx * dt;
-        y  += vy * dt;
+        // Semi-implicit (symplectic) Euler: advance the velocities first, then
+        // integrate the position with the *updated* velocity. Explicit Euler
+        // (position first) overshoots a braking agent's stopping distance by
+        // v*dt/2 -- 0.6 m for the 12 m/s lead in scenario_safety_stop, enough to
+        // open a gap the RSS guardrail no longer reacts to.
         vx  = std::max(0.0, vx + ax * dt);
         vy += (vy_des - vy) * std::min(1.0, 4.0 * dt);
+        x  += vx * dt;
+        y  += vy * dt;
         t  += dt;
     }
 };

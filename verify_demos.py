@@ -3,7 +3,7 @@ import sys
 sys.path.insert(0, "python")
 sys.path.insert(0, "build/Release")
 
-import world as W
+import scenario_cpp as W
 from run_pipeline import run
 
 SCENARIOS = [

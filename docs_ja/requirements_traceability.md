@@ -39,4 +39,4 @@ HARA (`hara.md`) から導出した安全目標 → 技術要求 → 実装コ�
 - ASIL 分解・独立性解析は未実施
 - SG2 のトリガー条件 (閉塞・センサ脱落) は未境界化 (SOTIF 課題)
 - REQ-SAF-04 は率として記述されているが、検証は個別ケース (離脱していく隣接車とゴーストトラックで制動しないこと) にとどまる。シナリオ母集団に対する誤検知率は測定しておらず、 $`\lt 1`$% は目標値であってエビデンスではない。
-- ガードレールは `safety/guardrail.hpp` と `python/guardrail.py` の 2 箇所に実装されており、過去に乖離が生じている。[`SAFETY_CASE.md`](SAFETY_CASE.md) の残留リスク R3 を参照
+- ガードレールはかつて `safety/guardrail.hpp` と `python/guardrail.py` の 2 箇所に実装されており、Python 側を削除するまでに 2 度の乖離が生じた。経緯は [`SAFETY_CASE.md`](SAFETY_CASE.md) の残留リスク R3 に記録している

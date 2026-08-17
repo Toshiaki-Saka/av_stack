@@ -25,7 +25,7 @@ def test_cpp_control_test():
 
 def test_controllers_track():
     import run_control_demo as R
-    from path import Path
+    from planning_cpp import Path
     path = Path(v_ref=12.0, dt=R.DT, L=R.L)
     budgets = {"PID": 0.4, "LQR": 0.2, "MPC": 0.2}
     ctls = {"PID": R.make_pid(), "LQR": R.make_lqr(), "MPC": R.make_mpc(path)}

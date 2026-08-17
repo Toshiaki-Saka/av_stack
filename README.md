@@ -119,10 +119,9 @@ control_test.cpp                    # standalone C++ unit tests: bicycle, LQR, M
 python/animation_demo.py            # real-time bird's-eye animation + time-series plots
 python/run_control_demo.py          # PID vs LQR vs MPC comparison on the double lane-change
 python/run_pipeline.py              # full closed-loop pipeline (C++ modules) on hard-brake
-python/world.py · path.py · trajectory.py   # support: constants + reference paths for demos
-python/{planning,guardrail,perception,sensors,occupancy}.py
-                                    # legacy/reference pure-Python implementations; the
-                                    #   production code is the *_cpp modules above
+python/hybrid.py                    # stateful wrapper around hybrid_cpp.Arbiter
+                                    # every model, sensor, planner and monitor lives in
+                                    #   C++; Python only wires them and draws
 
 # --- tests (pytest tests/, uses the C++ modules) ---
 tests/test_control.py · test_modules.py · test_localization.py

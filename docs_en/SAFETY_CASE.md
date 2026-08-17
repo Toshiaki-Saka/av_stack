@@ -165,25 +165,46 @@ It does **not** currently monitor:
 These are out of scope for the synthetic two-lane ODD but would require additional
 sub-goals in a real deployment.
 
-### R3 — the guardrail exists twice
+### R3 — the guardrail existed twice (resolved)
 
-The monitor is implemented in both `cpp/include/safety/guardrail.hpp` (the production
-path, exposed as `guardrail_cpp`) and `python/guardrail.py` (a reference
-implementation). Nothing structurally forces the two to agree, and they have already
-drifted: the C++ lateral RSS distance was missing the lateral braking term for some
-time, which silently reduced $d_{lat}$ to roughly a third of its specified value and
-left the entire cut-in branch subsumed by the longitudinal check. The closed-loop
-scenarios did not catch it, because the longitudinal check fired anyway and the
-outcome still looked safe.
+The monitor used to be implemented in both `cpp/include/safety/guardrail.hpp` (the
+production path, exposed as `guardrail_cpp`) and `python/guardrail.py` (a reference
+implementation). Nothing structurally forced the two to agree, and they drifted
+twice.
 
-This is the most instructive residual in this document. A safety monitor that is
-*duplicated* rather than *single-sourced* can fail silently in the copy that ships,
-while the copy that is read during review remains correct. Current mitigation is
-`tests/test_safety.py::test_guardrail_lateral_rss_matches_documented_formula`, which
-pins the production formula to the closed form in TECHNICAL.md §9.3, plus
-`test_lateral_rss`, which asserts the lateral branch produces a *strict* improvement
-over the longitudinal one and therefore cannot quietly become dead code again. A real
-deployment should eliminate the duplication rather than test around it.
+The first drift was in the monitor itself: the C++ lateral RSS distance was missing
+the lateral braking term for some time, which silently reduced $d_{lat}$ to roughly a
+third of its specified value and left the entire cut-in branch subsumed by the
+longitudinal check. The closed-loop scenarios did not catch it, because the
+longitudinal check fired anyway and the outcome still looked safe.
+
+The second drift was in the world the monitor is judged against, and it is the more
+pointed example. `python/world.py` advanced each agent with semi-implicit Euler
+(velocity first, then position); the C++ port in `world/scenario.hpp` advanced the
+position first. For the 12 m/s lead of `scenario_safety_stop` braking at 8 m/s², that
+one-line difference put the lead 1.2 m further down the road at rest — the exact
+0.6 m per side by which explicit and semi-implicit Euler bracket the closed-form
+stopping distance of 9.0 m. That margin was enough for the RSS check never to fire in
+a scenario written to require it, while the demo script — which imported the *Python*
+world — still reported 15 overrides. The shipped stack and the reviewed stack
+disagreed about whether the safety monitor engaged at all.
+
+Both duplicates are now gone. `python/{guardrail,planning,perception,sensors,
+occupancy,world,path,trajectory}.py` were deleted; every consumer imports the
+`*_cpp` module, and `world/scenario.hpp` was corrected to semi-implicit Euler so the
+single remaining implementation reproduces the behaviour the scenarios were written
+against. The formula-level mitigations remain in place —
+`tests/test_safety.py::test_guardrail_lateral_rss_matches_documented_formula` pins the
+production formula to the closed form in TECHNICAL.md §9.3, and `test_lateral_rss`
+asserts the lateral branch produces a *strict* improvement over the longitudinal one
+so it cannot quietly become dead code again — but they now guard one implementation
+rather than arbitrate between two.
+
+The lesson is worth keeping even though the residual is closed. A safety monitor that
+is *duplicated* rather than *single-sourced* can fail silently in the copy that ships
+while the copy that is read during review stays correct, and the duplication does not
+have to be in the monitor itself — a divergent integrator in the environment is
+enough to make the same monitor look like it works.
 
 **A2 (assumption / residual).** Coverage is argued only over the scripted scenario
 grid and the ODD above. Scenarios outside it — complex multi-agent interactions,
