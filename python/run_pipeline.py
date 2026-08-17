@@ -38,11 +38,16 @@ def build_mpc():
 
 
 def run(scenario, use_guardrail, seed=0, steps=110, v_des=13.0, use_lateral=True,
-        planner_fault=False):
+        planner_fault=False, lanes=None):
     S.seed_rng(seed)
     wd = scenario(); suite = S.SensorSuite()
     mot = WC.MultiObjectTracker(); mot.dt = DT; mot.min_hits = 2
-    planner = Planner(dt=DT, horizon=4.0, v_des=v_des, L=L, fault=planner_fault)
+    # `lanes` mirrors the _SimState option: restricting the candidate set to a
+    # single lane is what makes the ACC demo hold its lane instead of overtaking.
+    planner_kwargs = dict(dt=DT, horizon=4.0, v_des=v_des, L=L, fault=planner_fault)
+    if lanes is not None:
+        planner_kwargs["lanes"] = list(lanes)
+    planner = Planner(**planner_kwargs)
     guard = Guardrail(use_lateral=use_lateral)
     mpc = build_mpc()
 
