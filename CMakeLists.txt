@@ -28,6 +28,32 @@ endif()
 add_executable(control_test cpp/src/control_test.cpp)
 
 # pybind11 module: control_cpp
+#
+# `pip install pybind11` puts the CMake config under the interpreter's
+# site-packages, which CMake does not search, so a bare find_package(pybind11)
+# fails even though pybind11 is installed -- the configure step has never
+# succeeded in CI for this reason. Ask the interpreter where its config lives
+# before giving up, so `pip install pybind11 && cmake -S . -B build` just works.
+#
+# Development.Module is requested alongside Interpreter because pybind11 3.x
+# reuses whatever Python target it finds; with Interpreter alone its
+# pybind11_add_module() fails inside python_add_library().
+if(NOT pybind11_DIR)
+  find_package(Python COMPONENTS Interpreter Development.Module QUIET)
+  if(Python_EXECUTABLE)
+    execute_process(
+      COMMAND "${Python_EXECUTABLE}" -c
+              "import pybind11; print(pybind11.get_cmake_dir())"
+      OUTPUT_VARIABLE _pybind11_cmake_dir
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_QUIET
+      RESULT_VARIABLE _pybind11_query)
+    if(_pybind11_query EQUAL 0 AND EXISTS "${_pybind11_cmake_dir}")
+      set(pybind11_DIR "${_pybind11_cmake_dir}")
+      message(STATUS "pybind11 CMake config from the interpreter: ${pybind11_DIR}")
+    endif()
+  endif()
+endif()
 find_package(pybind11 REQUIRED)
 pybind11_add_module(control_cpp cpp/src/bindings_control.cpp)
 
